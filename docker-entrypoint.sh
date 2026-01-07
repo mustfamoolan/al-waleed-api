@@ -1,10 +1,24 @@
 #!/bin/bash
 set -e
 
-# Wait for MySQL to be ready
+# Wait for MySQL to be ready using PHP instead of mysqladmin
 echo "Waiting for MySQL to be ready..."
-while ! mysqladmin ping -h mysql -u root -p${DB_ROOT_PASSWORD:-root_password} --silent; do
-    sleep 1
+until php -r "
+try {
+    \$pdo = new PDO(
+        'mysql:host=mysql;port=3306',
+        '${DB_USERNAME:-al_waleed_user}',
+        '${DB_PASSWORD:-al_waleed_password}',
+        [PDO::ATTR_TIMEOUT => 2]
+    );
+    \$pdo->query('SELECT 1');
+    exit(0);
+} catch (PDOException \$e) {
+    exit(1);
+}
+" 2>/dev/null; do
+    echo "Waiting for MySQL..."
+    sleep 2
 done
 
 echo "MySQL is ready!"
