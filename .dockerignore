@@ -1,0 +1,71 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment files
+.env
+.env.*
+!.env.docker
+!.env.example
+
+# Dependencies
+/vendor
+/node_modules
+
+# IDE
+/.idea
+/.vscode
+/.fleet
+/.nova
+/.phpunit.cache
+.phpactor.json
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+/storage/logs/*
+/storage/pail/*
+
+# Cache
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/bootstrap/cache/*
+
+# Testing
+/phpunit.xml
+/tests
+/.phpunit.result.cache
+
+# Build files
+/public/build
+/public/hot
+/public/storage
+
+# Documentation
+README.md
+DEPLOYMENT.md
+*.md
+
+# Docker files (don't copy into container)
+docker-compose.yml
+Dockerfile
+.dockerignore
+docker/
+
+# Database
+/database/*.sqlite
+/database/*.sqlite-journal
+
+# Temporary files
+*.tmp
+*.bak
+*.cache
+

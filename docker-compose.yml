@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: al-waleed-api
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+      - ./storage:/var/www/html/storage
+      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+    ports:
+      - "8000:80"
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-al_waleed_db}
+      - DB_USERNAME=${DB_USERNAME:-al_waleed_user}
+      - DB_PASSWORD=${DB_PASSWORD:-al_waleed_password}
+      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD:-root_password}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - al-waleed-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: al-waleed-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-al_waleed_db}
+      MYSQL_USER: ${DB_USERNAME:-al_waleed_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-al_waleed_password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-root_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - al-waleed-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  al-waleed-network:
+    driver: bridge
+
