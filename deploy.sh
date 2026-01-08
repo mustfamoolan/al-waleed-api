@@ -66,6 +66,12 @@ docker compose exec -T app php artisan migrate --force || {
     echo -e "${YELLOW}⚠️  Warning: Migrations failed, but continuing...${NC}"
 }
 
+# Run seeders (only if manager doesn't exist)
+echo -e "${YELLOW}🌱 Running seeders...${NC}"
+docker compose exec -T app php artisan db:seed --class=ManagerSeeder || {
+    echo -e "${YELLOW}⚠️  Warning: Seeder failed or manager already exists, but continuing...${NC}"
+}
+
 # Create storage link
 echo -e "${YELLOW}🔗 Creating storage link...${NC}"
 docker compose exec -T app php artisan storage:link || true

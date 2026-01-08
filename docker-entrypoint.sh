@@ -56,6 +56,10 @@ php artisan view:clear
 echo "Running migrations..."
 php artisan migrate --force
 
+# Run seeders (only if manager doesn't exist)
+echo "Running seeders..."
+php artisan db:seed --class=ManagerSeeder || true
+
 # Create storage link for public files
 echo "Creating storage link..."
 php artisan storage:link || true
