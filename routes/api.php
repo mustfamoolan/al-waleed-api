@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ManagerAuthController;
+use App\Http\Controllers\Api\ManagerController;
+use App\Http\Controllers\Api\EmployeeController;
+use App\Http\Controllers\Api\RepresentativeController;
+use App\Http\Controllers\Api\PickerController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +59,24 @@ Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
     });
+});
+
+// Manager and Employee Authentication routes
+Route::prefix('manager-auth')->group(function () {
+    Route::post('/login', [ManagerAuthController::class, 'login']);
+    
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [ManagerAuthController::class, 'logout']);
+        Route::get('/me', [ManagerAuthController::class, 'me']);
+    });
+});
+
+// Manager and Employee Management routes (Manager only)
+Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
+    Route::apiResource('managers', ManagerController::class);
+    Route::apiResource('employees', EmployeeController::class);
+    Route::apiResource('representatives', RepresentativeController::class);
+    Route::apiResource('pickers', PickerController::class);
 });
 
 // Protected API routes

@@ -40,6 +40,22 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'manager' => [
+            'driver' => 'sanctum',
+            'provider' => 'managers',
+        ],
+        'employee' => [
+            'driver' => 'sanctum',
+            'provider' => 'employees',
+        ],
+        'representative' => [
+            'driver' => 'sanctum',
+            'provider' => 'representatives',
+        ],
+        'picker' => [
+            'driver' => 'sanctum',
+            'provider' => 'pickers',
+        ],
     ],
 
     /*
@@ -63,6 +79,22 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+        'managers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Manager::class,
+        ],
+        'employees' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Employee::class,
+        ],
+        'representatives' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Representative::class,
+        ],
+        'pickers' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\Picker::class,
         ],
 
         // 'users' => [
