@@ -37,9 +37,9 @@ git reset --hard "origin/$BRANCH" || {
 CURRENT_COMMIT=$(git rev-parse --short HEAD)
 echo -e "${GREEN}✅ Latest commit: $CURRENT_COMMIT${NC}"
 
-# Stop Docker containers
-echo -e "${YELLOW}🐳 Stopping Docker containers...${NC}"
-docker compose down || true
+# Stop Docker containers (keeping volumes to preserve database)
+echo -e "${YELLOW}🐳 Stopping Docker containers (preserving database)...${NC}"
+docker compose stop || true
 
 # Build Docker images
 echo -e "${YELLOW}🔨 Building Docker images...${NC}"
@@ -65,6 +65,10 @@ echo -e "${YELLOW}📦 Running database migrations...${NC}"
 docker compose exec -T app php artisan migrate --force || {
     echo -e "${YELLOW}⚠️  Warning: Migrations failed, but continuing...${NC}"
 }
+
+# Create storage link
+echo -e "${YELLOW}🔗 Creating storage link...${NC}"
+docker compose exec -T app php artisan storage:link || true
 
 # Clear cache
 echo -e "${YELLOW}🧹 Clearing application cache...${NC}"

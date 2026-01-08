@@ -56,6 +56,10 @@ php artisan view:clear
 echo "Running migrations..."
 php artisan migrate --force
 
+# Create storage link for public files
+echo "Creating storage link..."
+php artisan storage:link || true
+
 # Optimize for production
 if [ "${APP_ENV}" = "production" ]; then
     echo "Optimizing for production..."
