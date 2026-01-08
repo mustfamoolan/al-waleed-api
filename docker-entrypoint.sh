@@ -59,9 +59,9 @@ php artisan migrate --force
 # Optimize for production
 if [ "${APP_ENV}" = "production" ]; then
     echo "Optimizing for production..."
-    php artisan config:cache
-    php artisan route:cache
-    php artisan view:cache
+    php artisan config:cache || true
+    php artisan route:cache || true
+    php artisan view:cache || true
 fi
 
 # Start Apache
