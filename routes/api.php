@@ -24,6 +24,26 @@ Route::get('/health', function () {
     ]);
 });
 
+// Test deployment route
+Route::get('/test-deployment', function () {
+    return response()->json([
+        'status' => 'success',
+        'message' => 'Automatic deployment is working! 🚀',
+        'deployment_test' => true,
+        'timestamp' => now()->toDateTimeString(),
+        'server_time' => now()->format('Y-m-d H:i:s'),
+        'app_env' => env('APP_ENV', 'unknown'),
+        'app_name' => env('APP_NAME', 'Al-Waleed API'),
+        'version' => '1.0.0',
+        'features' => [
+            'automatic_deployment' => true,
+            'database_migrations' => true,
+            'storage_link' => true,
+            'docker_compose' => true,
+        ],
+    ]);
+});
+
 // Authentication routes
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
