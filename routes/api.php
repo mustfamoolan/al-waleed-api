@@ -61,6 +61,25 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// Manager and Employee Health Check
+Route::get('/manager-employee/health', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $dbStatus = 'connected';
+    } catch (\Exception $e) {
+        $dbStatus = 'disconnected';
+    }
+    
+    return response()->json([
+        'status' => 'success',
+        'api' => 'Manager & Employee API',
+        'message' => 'API is running and healthy',
+        'database' => $dbStatus,
+        'timestamp' => now()->toDateTimeString(),
+        'version' => '1.0.0',
+    ]);
+});
+
 // Manager and Employee Authentication routes
 Route::prefix('manager-auth')->group(function () {
     Route::post('/login', [ManagerAuthController::class, 'login']);

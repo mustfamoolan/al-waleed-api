@@ -13,6 +13,25 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
+// Picker Health Check
+Route::get('/health', function () {
+    try {
+        \Illuminate\Support\Facades\DB::connection()->getPdo();
+        $dbStatus = 'connected';
+    } catch (\Exception $e) {
+        $dbStatus = 'disconnected';
+    }
+    
+    return response()->json([
+        'status' => 'success',
+        'api' => 'Picker API',
+        'message' => 'API is running and healthy',
+        'database' => $dbStatus,
+        'timestamp' => now()->toDateTimeString(),
+        'version' => '1.0.0',
+    ]);
+});
+
 // Picker Authentication routes
 Route::prefix('auth')->group(function () {
     Route::post('/login', [PickerAuthController::class, 'login']);
