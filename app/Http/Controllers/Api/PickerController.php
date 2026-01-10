@@ -7,6 +7,9 @@ use App\Http\Requests\Picker\UpdatePickerRequest;
 use App\Http\Resources\PickerResource;
 use App\Models\Picker;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class PickerController extends BaseController
 {
@@ -73,5 +76,41 @@ class PickerController extends BaseController
     {
         $picker->delete();
         return $this->successResponse(null, 'Picker deleted successfully');
+    }
+
+    /**
+     * Upload profile image for picker.
+     */
+    public function uploadImage(Request $request, Picker $picker): JsonResponse
+    {
+        try {
+            $request->validate([
+                'profile_image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'], // 2MB max
+            ]);
+
+            // حذف الصورة القديمة إذا كانت موجودة
+            if ($picker->profile_image && Storage::disk('public')->exists($picker->profile_image)) {
+                Storage::disk('public')->delete($picker->profile_image);
+            }
+
+            // رفع الصورة الجديدة
+            $path = $request->file('profile_image')->store('pickers', 'public');
+            
+            // تحديث المسار في قاعدة البيانات
+            $picker->update([
+                'profile_image' => $path
+            ]);
+
+            return $this->successResponse([
+                'profile_image' => $path,
+                'profile_image_url' => asset('storage/' . $path)
+            ], 'Image uploaded successfully');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Picker image upload error: ' . $e->getMessage());
+            return $this->errorResponse('Failed to upload image', 500);
+        }
     }
 }

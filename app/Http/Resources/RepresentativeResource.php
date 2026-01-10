@@ -19,6 +19,7 @@ class RepresentativeResource extends JsonResource
             'full_name' => $this->full_name,
             'phone_number' => $this->phone_number,
             'profile_image' => $this->profile_image,
+            'profile_image_url' => $this->profile_image ? asset('storage/' . $this->profile_image) : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -7,6 +7,9 @@ use App\Http\Requests\Representative\UpdateRepresentativeRequest;
 use App\Http\Resources\RepresentativeResource;
 use App\Models\Representative;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class RepresentativeController extends BaseController
 {
@@ -73,5 +76,41 @@ class RepresentativeController extends BaseController
     {
         $representative->delete();
         return $this->successResponse(null, 'Representative deleted successfully');
+    }
+
+    /**
+     * Upload profile image for representative.
+     */
+    public function uploadImage(Request $request, Representative $representative): JsonResponse
+    {
+        try {
+            $request->validate([
+                'profile_image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'], // 2MB max
+            ]);
+
+            // حذف الصورة القديمة إذا كانت موجودة
+            if ($representative->profile_image && Storage::disk('public')->exists($representative->profile_image)) {
+                Storage::disk('public')->delete($representative->profile_image);
+            }
+
+            // رفع الصورة الجديدة
+            $path = $request->file('profile_image')->store('representatives', 'public');
+            
+            // تحديث المسار في قاعدة البيانات
+            $representative->update([
+                'profile_image' => $path
+            ]);
+
+            return $this->successResponse([
+                'profile_image' => $path,
+                'profile_image_url' => asset('storage/' . $path)
+            ], 'Image uploaded successfully');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Representative image upload error: ' . $e->getMessage());
+            return $this->errorResponse('Failed to upload image', 500);
+        }
     }
 }

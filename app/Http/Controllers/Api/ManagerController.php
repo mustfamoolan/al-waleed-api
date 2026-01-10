@@ -7,6 +7,9 @@ use App\Http\Requests\Manager\UpdateManagerRequest;
 use App\Http\Resources\ManagerResource;
 use App\Models\Manager;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class ManagerController extends BaseController
 {
@@ -73,5 +76,41 @@ class ManagerController extends BaseController
     {
         $manager->delete();
         return $this->successResponse(null, 'Manager deleted successfully');
+    }
+
+    /**
+     * Upload profile image for manager.
+     */
+    public function uploadImage(Request $request, Manager $manager): JsonResponse
+    {
+        try {
+            $request->validate([
+                'profile_image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'], // 2MB max
+            ]);
+
+            // حذف الصورة القديمة إذا كانت موجودة
+            if ($manager->profile_image && Storage::disk('public')->exists($manager->profile_image)) {
+                Storage::disk('public')->delete($manager->profile_image);
+            }
+
+            // رفع الصورة الجديدة
+            $path = $request->file('profile_image')->store('managers', 'public');
+            
+            // تحديث المسار في قاعدة البيانات
+            $manager->update([
+                'profile_image' => $path
+            ]);
+
+            return $this->successResponse([
+                'profile_image' => $path,
+                'profile_image_url' => asset('storage/' . $path)
+            ], 'Image uploaded successfully');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Manager image upload error: ' . $e->getMessage());
+            return $this->errorResponse('Failed to upload image', 500);
+        }
     }
 }

@@ -21,7 +21,8 @@ class UpdateRepresentativeRequest extends FormRequest
      */
     public function rules(): array
     {
-        $representativeId = $this->route('representative');
+        $representative = $this->route('representative');
+        $representativeId = $representative instanceof \App\Models\Representative ? $representative->rep_id : $representative;
         
         return [
             'full_name' => ['sometimes', 'required', 'string', 'max:255'],

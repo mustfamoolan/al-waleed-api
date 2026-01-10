@@ -20,6 +20,7 @@ class EmployeeResource extends JsonResource
             'phone_number' => $this->phone_number,
             'job_role' => $this->job_role,
             'profile_image' => $this->profile_image,
+            'profile_image_url' => $this->profile_image ? asset('storage/' . $this->profile_image) : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

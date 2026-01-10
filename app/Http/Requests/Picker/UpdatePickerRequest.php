@@ -21,7 +21,8 @@ class UpdatePickerRequest extends FormRequest
      */
     public function rules(): array
     {
-        $pickerId = $this->route('picker');
+        $picker = $this->route('picker');
+        $pickerId = $picker instanceof \App\Models\Picker ? $picker->picker_id : $picker;
         
         return [
             'full_name' => ['sometimes', 'required', 'string', 'max:255'],

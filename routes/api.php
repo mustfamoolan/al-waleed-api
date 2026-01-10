@@ -93,9 +93,16 @@ Route::prefix('manager-auth')->group(function () {
 // Manager and Employee Management routes (Manager only)
 Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
     Route::apiResource('managers', ManagerController::class);
+    Route::post('managers/{manager}/upload-image', [ManagerController::class, 'uploadImage']);
+    
     Route::apiResource('employees', EmployeeController::class);
+    Route::post('employees/{employee}/upload-image', [EmployeeController::class, 'uploadImage']);
+    
     Route::apiResource('representatives', RepresentativeController::class);
+    Route::post('representatives/{representative}/upload-image', [RepresentativeController::class, 'uploadImage']);
+    
     Route::apiResource('pickers', PickerController::class);
+    Route::post('pickers/{picker}/upload-image', [PickerController::class, 'uploadImage']);
 });
 
 // Protected API routes

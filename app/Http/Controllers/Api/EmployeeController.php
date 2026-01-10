@@ -7,6 +7,9 @@ use App\Http\Requests\Employee\UpdateEmployeeRequest;
 use App\Http\Resources\EmployeeResource;
 use App\Models\Employee;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class EmployeeController extends BaseController
 {
@@ -75,5 +78,41 @@ class EmployeeController extends BaseController
     {
         $employee->delete();
         return $this->successResponse(null, 'Employee deleted successfully');
+    }
+
+    /**
+     * Upload profile image for employee.
+     */
+    public function uploadImage(Request $request, Employee $employee): JsonResponse
+    {
+        try {
+            $request->validate([
+                'profile_image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'], // 2MB max
+            ]);
+
+            // حذف الصورة القديمة إذا كانت موجودة
+            if ($employee->profile_image && Storage::disk('public')->exists($employee->profile_image)) {
+                Storage::disk('public')->delete($employee->profile_image);
+            }
+
+            // رفع الصورة الجديدة
+            $path = $request->file('profile_image')->store('employees', 'public');
+            
+            // تحديث المسار في قاعدة البيانات
+            $employee->update([
+                'profile_image' => $path
+            ]);
+
+            return $this->successResponse([
+                'profile_image' => $path,
+                'profile_image_url' => asset('storage/' . $path)
+            ], 'Image uploaded successfully');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->validationErrorResponse($e->errors());
+        } catch (\Exception $e) {
+            Log::error('Employee image upload error: ' . $e->getMessage());
+            return $this->errorResponse('Failed to upload image', 500);
+        }
     }
 }

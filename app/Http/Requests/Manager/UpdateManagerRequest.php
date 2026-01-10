@@ -21,7 +21,8 @@ class UpdateManagerRequest extends FormRequest
      */
     public function rules(): array
     {
-        $managerId = $this->route('manager');
+        $manager = $this->route('manager');
+        $managerId = $manager instanceof \App\Models\Manager ? $manager->manager_id : $manager;
         
         return [
             'full_name' => ['sometimes', 'required', 'string', 'max:255'],
