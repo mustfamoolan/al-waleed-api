@@ -6,6 +6,14 @@ use App\Http\Controllers\Api\ManagerController;
 use App\Http\Controllers\Api\EmployeeController;
 use App\Http\Controllers\Api\RepresentativeController;
 use App\Http\Controllers\Api\PickerController;
+use App\Http\Controllers\Api\SupplierController;
+use App\Http\Controllers\Api\PurchaseInvoiceController;
+use App\Http\Controllers\Api\SupplierPaymentController;
+use App\Http\Controllers\Api\PurchaseReturnController;
+use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\JournalEntryController;
+use App\Http\Controllers\Api\ReportController;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -53,7 +61,7 @@ Route::get('/test-deployment', function () {
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    
+
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -69,7 +77,7 @@ Route::get('/manager-employee/health', function () {
     } catch (\Exception $e) {
         $dbStatus = 'disconnected';
     }
-    
+
     return response()->json([
         'status' => 'success',
         'api' => 'Manager & Employee API',
@@ -83,7 +91,7 @@ Route::get('/manager-employee/health', function () {
 // Manager and Employee Authentication routes
 Route::prefix('manager-auth')->group(function () {
     Route::post('/login', [ManagerAuthController::class, 'login']);
-    
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [ManagerAuthController::class, 'logout']);
         Route::get('/me', [ManagerAuthController::class, 'me']);
@@ -94,15 +102,53 @@ Route::prefix('manager-auth')->group(function () {
 Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
     Route::apiResource('managers', ManagerController::class);
     Route::post('managers/{manager}/upload-image', [ManagerController::class, 'uploadImage']);
-    
+
     Route::apiResource('employees', EmployeeController::class);
     Route::post('employees/{employee}/upload-image', [EmployeeController::class, 'uploadImage']);
-    
+
     Route::apiResource('representatives', RepresentativeController::class);
     Route::post('representatives/{representative}/upload-image', [RepresentativeController::class, 'uploadImage']);
-    
+
     Route::apiResource('pickers', PickerController::class);
     Route::post('pickers/{picker}/upload-image', [PickerController::class, 'uploadImage']);
+
+    // Suppliers Management
+    Route::apiResource('suppliers', SupplierController::class);
+    Route::post('suppliers/{supplier}/upload-image', [SupplierController::class, 'uploadImage']);
+    Route::get('suppliers/{supplier}/balance', [SupplierController::class, 'balance']);
+    Route::get('suppliers/{supplier}/summary', [SupplierController::class, 'summary']);
+    Route::get('suppliers/{supplier}/invoices', [PurchaseInvoiceController::class, 'index']);
+
+    // Purchase Invoices
+    Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
+    Route::post('purchase-invoices/{purchase_invoice}/duplicate', [PurchaseInvoiceController::class, 'duplicate']);
+    Route::post('purchase-invoices/{purchase_invoice}/post', [PurchaseInvoiceController::class, 'post']);
+    Route::get('purchase-invoices/{purchase_invoice}/payments', [SupplierPaymentController::class, 'index']);
+
+    // Supplier Payments
+    Route::apiResource('supplier-payments', SupplierPaymentController::class);
+    Route::get('suppliers/{supplier}/payments', [SupplierPaymentController::class, 'index']);
+
+    // Purchase Returns
+    Route::apiResource('purchase-returns', PurchaseReturnController::class);
+    Route::post('purchase-returns/{purchase_return}/post', [PurchaseReturnController::class, 'post']);
+
+    // Accounts (Chart of Accounts)
+    Route::apiResource('accounts', AccountController::class);
+    Route::get('accounts/{account}/transactions', [AccountController::class, 'transactions']);
+    Route::get('accounts/{account}/balance', [AccountController::class, 'balance']);
+
+    // Journal Entries
+    Route::apiResource('journal-entries', JournalEntryController::class);
+    Route::post('journal-entries/{journal_entry}/post', [JournalEntryController::class, 'post']);
+    Route::get('journal-entries/{journal_entry}/lines', [JournalEntryController::class, 'lines']);
+
+    // Reports & Analytics
+    Route::get('suppliers/{supplier}/profit', [ReportController::class, 'supplierProfit']);
+    Route::get('suppliers/{supplier}/purchases-summary', [ReportController::class, 'purchasesSummary']);
+    Route::get('suppliers/{supplier}/price-comparison', [ReportController::class, 'priceComparison']);
+    Route::get('reports/financial-summary', [ReportController::class, 'financialSummary']);
+    Route::get('reports/suppliers-report', [ReportController::class, 'suppliersReport']);
 });
 
 // Protected API routes
@@ -110,7 +156,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
-    
+
     // Add your protected routes here
 });
 
