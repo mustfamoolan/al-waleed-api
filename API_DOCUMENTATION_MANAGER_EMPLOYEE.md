@@ -191,6 +191,7 @@ Authorization: Bearer {token}
       "full_name": "أحمد محمد",
       "phone_number": "0501234567",
       "profile_image": null,
+      "profile_image_url": null,
       "created_at": "2026-01-08T10:00:00.000000Z",
       "updated_at": "2026-01-08T10:00:00.000000Z"
     },
@@ -198,7 +199,8 @@ Authorization: Bearer {token}
       "manager_id": 2,
       "full_name": "محمد علي",
       "phone_number": "0507654321",
-      "profile_image": "https://example.com/image.jpg",
+      "profile_image": "managers/abc123.jpg",
+      "profile_image_url": "https://maktabalwaleed.com/storage/managers/abc123.jpg",
       "created_at": "2026-01-08T11:00:00.000000Z",
       "updated_at": "2026-01-08T11:00:00.000000Z"
     }
@@ -363,6 +365,7 @@ Authorization: Bearer {token}
       "phone_number": "0502222222",
       "job_role": "محاسب",
       "profile_image": null,
+      "profile_image_url": null,
       "created_at": "2026-01-08T10:00:00.000000Z",
       "updated_at": "2026-01-08T10:00:00.000000Z"
     },
@@ -371,7 +374,8 @@ Authorization: Bearer {token}
       "full_name": "فاطمة علي",
       "phone_number": "0503333333",
       "job_role": "مدقق",
-      "profile_image": "https://example.com/image.jpg",
+      "profile_image": "employees/xyz789.jpg",
+      "profile_image_url": "https://maktabalwaleed.com/storage/employees/xyz789.jpg",
       "created_at": "2026-01-08T11:00:00.000000Z",
       "updated_at": "2026-01-08T11:00:00.000000Z"
     }
@@ -675,6 +679,202 @@ Authorization: Bearer {token}
 
 ---
 
+## Image Upload Endpoints (رفع الصور)
+
+جميع المستخدمين الآن يمكنهم رفع صور شخصية عبر endpoints منفصلة.
+
+### 25. رفع صورة مدير
+
+**POST** `/api/managers/{manager_id}/upload-image`
+
+**Headers:**
+```
+Authorization: Bearer {token}
+Content-Type: multipart/form-data
+```
+
+**Body (Form Data):**
+- `profile_image` (file) - مطلوب - ملف الصورة
+
+**المتطلبات:**
+- أنواع الملفات المدعومة: jpeg, jpg, png, gif, webp
+- الحجم الأقصى: 2MB
+
+**Response (Success - 200):**
+```json
+{
+  "status": "success",
+  "message": "Image uploaded successfully",
+  "data": {
+    "profile_image": "managers/abc123xyz.jpg",
+    "profile_image_url": "https://maktabalwaleed.com/storage/managers/abc123xyz.jpg"
+  }
+}
+```
+
+**Response (Error - 422 - Validation):**
+```json
+{
+  "status": "error",
+  "message": "Validation failed",
+  "errors": {
+    "profile_image": [
+      "The profile image must be an image.",
+      "The profile image must not be greater than 2048 kilobytes."
+    ]
+  }
+}
+```
+
+**Response (Error - 413 - File Too Large):**
+```html
+<html>
+<head><title>413 Request Entity Too Large</title></head>
+<body>
+<center><h1>413 Request Entity Too Large</h1></center>
+<hr><center>nginx</center>
+</body>
+</html>
+```
+
+**ملاحظة:** إذا واجهت خطأ 413، فهذا يعني أن nginx يرفض الملف. راجع قسم "Troubleshooting" أدناه.
+
+**مثال Flutter/Dart:**
+```dart
+import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
+Future<void> uploadManagerImage(int managerId, File imageFile) async {
+  try {
+    FormData formData = FormData.fromMap({
+      'profile_image': await MultipartFile.fromFile(
+        imageFile.path,
+        filename: 'manager_$managerId.jpg',
+      ),
+    });
+
+    final response = await dio.post(
+      '/managers/$managerId/upload-image',
+      data: formData,
+    );
+    
+    print('✅ Image uploaded: ${response.data['data']['profile_image_url']}');
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 422) {
+      print('❌ Validation error: ${e.response?.data}');
+    } else if (e.response?.statusCode == 413) {
+      print('❌ Image too large. Please compress the image.');
+    } else {
+      print('❌ Upload failed: ${e.message}');
+    }
+  }
+}
+```
+
+---
+
+### 26. رفع صورة موظف
+
+**POST** `/api/employees/{emp_id}/upload-image`
+
+نفس التفاصيل أعلاه، لكن للموظفين. الصور تُحفظ في `storage/app/public/employees/`.
+
+**Response (Success - 200):**
+```json
+{
+  "status": "success",
+  "message": "Image uploaded successfully",
+  "data": {
+    "profile_image": "employees/xyz789abc.jpg",
+    "profile_image_url": "https://maktabalwaleed.com/storage/employees/xyz789abc.jpg"
+  }
+}
+```
+
+**مثال cURL:**
+```bash
+curl -X POST https://maktabalwaleed.com/api/employees/1/upload-image \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "profile_image=@/path/to/image.jpg"
+```
+
+---
+
+### 27. رفع صورة ممثل
+
+**POST** `/api/representatives/{rep_id}/upload-image`
+
+نفس التفاصيل أعلاه، لكن للممثلين. الصور تُحفظ في `storage/app/public/representatives/`.
+
+**Response (Success - 200):**
+```json
+{
+  "status": "success",
+  "message": "Image uploaded successfully",
+  "data": {
+    "profile_image": "representatives/def456ghi.jpg",
+    "profile_image_url": "https://maktabalwaleed.com/storage/representatives/def456ghi.jpg"
+  }
+}
+```
+
+---
+
+### 28. رفع صورة عامل تجهيز
+
+**POST** `/api/pickers/{picker_id}/upload-image`
+
+نفس التفاصيل أعلاه، لكن لعمال التجهيز. الصور تُحفظ في `storage/app/public/pickers/`.
+
+**Response (Success - 200):**
+```json
+{
+  "status": "success",
+  "message": "Image uploaded successfully",
+  "data": {
+    "profile_image": "pickers/jkl012mno.jpg",
+    "profile_image_url": "https://maktabalwaleed.com/storage/pickers/jkl012mno.jpg"
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+### مشكلة خطأ 413 - Request Entity Too Large
+
+إذا واجهت خطأ 413 عند رفع الصور، فهذا يعني أن nginx يحدد حجم الرفع. الحلول:
+
+**الحل 1: زيادة حد nginx (للسيرفر)**
+```nginx
+# في ملف nginx config
+client_max_body_size 10M;
+```
+
+**الحل 2: ضغط الصورة من Flutter**
+```dart
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+
+Future<File?> compressImage(File file) async {
+  final dir = await getTemporaryDirectory();
+  final targetPath = '${dir.absolute.path}/temp_${DateTime.now().millisecondsSinceEpoch}.jpg';
+  
+  var result = await FlutterImageCompress.compressAndGetFile(
+    file.absolute.path,
+    targetPath,
+    quality: 70,
+    minWidth: 800,
+    minHeight: 800,
+  );
+  
+  return result != null ? File(result.path) : null;
+}
+```
+
+---
+
 ## Status Codes
 
 - `200` - Success
@@ -682,6 +882,7 @@ Authorization: Bearer {token}
 - `401` - Unauthenticated (لم يتم تسجيل الدخول أو token غير صحيح)
 - `403` - Forbidden (ليس لديك صلاحية للوصول - فقط المدير)
 - `404` - Not Found (الموارد المطلوبة غير موجودة)
+- `413` - Request Entity Too Large (الصورة كبيرة جداً - يحتاج تعديل nginx)
 - `422` - Validation Error (خطأ في البيانات المرسلة)
 - `500` - Server Error
 
@@ -729,4 +930,6 @@ curl -X GET http://your-domain.com/api/employees \
 3. **الـ Token:** يجب إرسال الـ token في header `Authorization: Bearer {token}` لكل request محمي
 4. **الـ Phone Number:** يجب أن يكون فريد (unique) لكل نوع مستخدم
 5. **كلمة المرور:** يجب أن تكون على الأقل 6 أحرف
+6. **رفع الصور:** جميع endpoints رفع الصور تحذف الصورة القديمة تلقائياً عند رفع صورة جديدة
+7. **URL الصور:** جميع الـ responses الآن تُرجع `profile_image` (المسار) و `profile_image_url` (URL كامل)
 
