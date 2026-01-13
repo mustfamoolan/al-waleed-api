@@ -4,7 +4,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Support\Facades\Route;
-use Throwable;
+
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('api')
                 ->prefix('representative-api')
                 ->group(base_path('routes/representative-api.php'));
-            
+
             Route::middleware('api')
                 ->prefix('picker-api')
                 ->group(base_path('routes/picker-api.php'));
