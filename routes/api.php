@@ -11,7 +11,11 @@ use App\Http\Controllers\Api\PurchaseInvoiceController;
 use App\Http\Controllers\Api\SupplierPaymentController;
 use App\Http\Controllers\Api\PurchaseReturnController;
 use App\Http\Controllers\Api\AccountController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\InventoryMovementController;
 use App\Http\Controllers\Api\JournalEntryController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductSaleController;
 use App\Http\Controllers\Api\ReportController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -149,6 +153,30 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
     Route::get('suppliers/{supplier}/price-comparison', [ReportController::class, 'priceComparison']);
     Route::get('reports/financial-summary', [ReportController::class, 'financialSummary']);
     Route::get('reports/suppliers-report', [ReportController::class, 'suppliersReport']);
+
+    // Categories Management
+    Route::apiResource('categories', CategoryController::class);
+    Route::get('categories/{category}/products', [CategoryController::class, 'products']);
+
+    // Products Management
+    Route::apiResource('products', ProductController::class);
+    Route::post('products/{product}/upload-image', [ProductController::class, 'uploadImage']);
+    Route::get('products/{product}/stock', [ProductController::class, 'stock']);
+    Route::get('products/{product}/movements', [ProductController::class, 'movements']);
+    Route::get('products/{product}/sales', [ProductController::class, 'sales']);
+    Route::get('products/{product}/profit', [ProductController::class, 'profit']);
+    Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock']);
+    Route::get('products/low-stock', [ProductController::class, 'lowStock']);
+    Route::get('products/stock-report', [ProductController::class, 'stockReport']);
+    Route::get('products/profit-report', [ProductController::class, 'profitReport']);
+    Route::get('products/sales-report', [ProductController::class, 'salesReport']);
+
+    // Inventory Movements
+    Route::get('inventory-movements', [InventoryMovementController::class, 'index']);
+
+    // Product Sales
+    Route::apiResource('product-sales', ProductSaleController::class);
+    Route::get('product-sales/profit-report', [ProductSaleController::class, 'profitReport']);
 });
 
 // Protected API routes

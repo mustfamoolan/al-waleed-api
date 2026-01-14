@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\PurchaseReturn\StorePurchaseReturnRequest;
 use App\Http\Resources\PurchaseReturnResource;
+use App\Models\InventoryMovement;
+use App\Models\Product;
 use App\Models\PurchaseReturnInvoice;
 use App\Models\PurchaseReturnItem;
 use Illuminate\Http\JsonResponse;
@@ -95,14 +97,75 @@ class PurchaseReturnController extends BaseController
             return $this->errorResponse('Only draft returns can be posted', 422);
         }
 
-        $purchase_return->status = 'completed';
-        $purchase_return->save();
+        try {
+            DB::beginTransaction();
 
-        // TODO: Create journal entry here when accounting system is ready
+            $manager = request()->user();
 
-        return $this->successResponse(
-            new PurchaseReturnResource($purchase_return->load(['supplier', 'originalInvoice', 'items'])),
-            'Purchase return posted successfully'
-        );
+            // Process each item and update inventory
+            foreach ($purchase_return->items as $item) {
+                $product = null;
+
+                // Try to find product by SKU first
+                if ($item->product_code) {
+                    $product = Product::where('sku', $item->product_code)->first();
+                }
+
+                // If not found by SKU, try by name
+                if (!$product && $item->product_name) {
+                    $product = Product::where('product_name', $item->product_name)
+                        ->where('supplier_id', $purchase_return->supplier_id)
+                        ->first();
+                }
+
+                // If still not found, try from original item
+                if (!$product && $item->original_item_id && $item->originalItem && $item->originalItem->product_id) {
+                    $product = Product::find($item->originalItem->product_id);
+                }
+
+                if ($product) {
+                    // Update product stock (decrease)
+                    $stockBefore = $product->current_stock;
+                    $product->updateStock(-$item->quantity, 'return');
+                    $stockAfter = $product->current_stock;
+
+                    // Create inventory movement
+                    $movement = InventoryMovement::create([
+                        'product_id' => $product->product_id,
+                        'movement_type' => 'return',
+                        'reference_type' => 'purchase_return',
+                        'reference_id' => $purchase_return->return_invoice_id,
+                        'quantity' => -$item->quantity,
+                        'stock_before' => $stockBefore,
+                        'stock_after' => $stockAfter,
+                        'unit_price' => $item->unit_price,
+                        'notes' => "From return invoice: {$purchase_return->return_invoice_number}. Reason: " . ($item->reason ?? 'N/A'),
+                        'created_by' => $manager->manager_id,
+                    ]);
+
+                    // Link item to product and movement
+                    $item->product_id = $product->product_id;
+                    $item->inventory_movement_id = $movement->movement_id;
+                    $item->save();
+                }
+            }
+
+            $purchase_return->status = 'completed';
+            $purchase_return->save();
+
+            // TODO: Create journal entry here when accounting system is ready
+
+            DB::commit();
+
+            return $this->successResponse(
+                new PurchaseReturnResource($purchase_return->load(['supplier', 'originalInvoice', 'items'])),
+                'Purchase return posted successfully'
+            );
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Purchase return post error: ' . $e->getMessage());
+            return $this->errorResponse('Failed to post purchase return', 500);
+        }
     }
 }

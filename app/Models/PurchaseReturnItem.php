@@ -14,6 +14,8 @@ class PurchaseReturnItem extends Model
     protected $fillable = [
         'return_invoice_id',
         'original_item_id',
+        'product_id',
+        'inventory_movement_id',
         'product_name',
         'product_code',
         'quantity',
@@ -37,5 +39,15 @@ class PurchaseReturnItem extends Model
     public function originalItem()
     {
         return $this->belongsTo(PurchaseInvoiceItem::class, 'original_item_id');
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    public function inventoryMovement()
+    {
+        return $this->belongsTo(InventoryMovement::class, 'inventory_movement_id');
     }
 }

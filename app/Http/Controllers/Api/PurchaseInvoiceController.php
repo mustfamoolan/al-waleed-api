@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\PurchaseInvoice\StorePurchaseInvoiceRequest;
 use App\Http\Requests\PurchaseInvoice\UpdatePurchaseInvoiceRequest;
 use App\Http\Resources\PurchaseInvoiceResource;
+use App\Models\InventoryMovement;
+use App\Models\Product;
 use App\Models\PurchaseInvoice;
 use App\Models\PurchaseInvoiceItem;
 use App\Models\Supplier;
@@ -277,15 +279,76 @@ class PurchaseInvoiceController extends BaseController
             return $this->errorResponse('Only draft invoices can be posted', 422);
         }
 
-        $purchase_invoice->status = 'pending';
-        $purchase_invoice->save();
-        $purchase_invoice->updateStatus();
+        try {
+            DB::beginTransaction();
 
-        // TODO: Create journal entry here when accounting system is ready
+            $manager = request()->user();
 
-        return $this->successResponse(
-            new PurchaseInvoiceResource($purchase_invoice->load(['supplier', 'items'])),
-            'Purchase invoice posted successfully'
-        );
+            // Process each item and update inventory
+            foreach ($purchase_invoice->items as $item) {
+                $product = null;
+
+                // Try to find product by SKU first
+                if ($item->product_code) {
+                    $product = Product::where('sku', $item->product_code)->first();
+                }
+
+                // If not found by SKU, try by name
+                if (!$product && $item->product_name) {
+                    $product = Product::where('product_name', $item->product_name)
+                        ->where('supplier_id', $purchase_invoice->supplier_id)
+                        ->first();
+                }
+
+                if ($product) {
+                    // Update product stock
+                    $stockBefore = $product->current_stock;
+                    $product->updateStock($item->quantity, 'purchase');
+                    $stockAfter = $product->current_stock;
+
+                    // Update product purchase price and date
+                    $product->purchase_price = $item->unit_price;
+                    $product->last_purchase_date = $purchase_invoice->invoice_date;
+                    $product->save();
+
+                    // Create inventory movement
+                    $movement = InventoryMovement::create([
+                        'product_id' => $product->product_id,
+                        'movement_type' => 'purchase',
+                        'reference_type' => 'purchase_invoice',
+                        'reference_id' => $purchase_invoice->invoice_id,
+                        'quantity' => $item->quantity,
+                        'stock_before' => $stockBefore,
+                        'stock_after' => $stockAfter,
+                        'unit_price' => $item->unit_price,
+                        'notes' => "From invoice: {$purchase_invoice->invoice_number}",
+                        'created_by' => $manager->manager_id,
+                    ]);
+
+                    // Link item to product and movement
+                    $item->product_id = $product->product_id;
+                    $item->inventory_movement_id = $movement->movement_id;
+                    $item->save();
+                }
+            }
+
+            $purchase_invoice->status = 'pending';
+            $purchase_invoice->save();
+            $purchase_invoice->updateStatus();
+
+            // TODO: Create journal entry here when accounting system is ready
+
+            DB::commit();
+
+            return $this->successResponse(
+                new PurchaseInvoiceResource($purchase_invoice->load(['supplier', 'items'])),
+                'Purchase invoice posted successfully'
+            );
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Purchase invoice post error: ' . $e->getMessage());
+            return $this->errorResponse('Failed to post purchase invoice', 500);
+        }
     }
 }
