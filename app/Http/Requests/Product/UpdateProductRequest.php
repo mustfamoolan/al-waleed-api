@@ -34,6 +34,7 @@ class UpdateProductRequest extends FormRequest
             'pieces_per_carton' => ['nullable', 'integer', 'min:1', 'required_if:unit_type,carton'],
             'piece_weight' => ['nullable', 'numeric', 'min:0'],
             'weight_unit' => ['nullable', 'in:kg,gram,liter,ml,piece'],
+            'current_stock' => ['nullable', 'numeric', 'min:0'],
             'purchase_price' => ['sometimes', 'required', 'numeric', 'min:0'],
             'wholesale_price' => ['nullable', 'numeric', 'min:0'],
             'retail_price' => ['nullable', 'numeric', 'min:0'],
