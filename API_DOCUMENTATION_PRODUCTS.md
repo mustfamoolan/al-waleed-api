@@ -158,12 +158,14 @@ Authorization: Bearer {token}
       "unit_type": "piece",
       "pieces_per_carton": null,
       "piece_weight": 2.5,
+      "weight_unit": "kg",
       "carton_weight": null,
       "current_stock": 50,
       "purchase_price": 1000.00,
       "wholesale_price": 1200.00,
       "retail_price": 1500.00,
       "last_purchase_date": "2026-01-10",
+      "last_sale_date": "2026-01-12",
       "is_active": true,
       "notes": "ملاحظات",
       "is_low_stock": false,
@@ -187,10 +189,12 @@ Authorization: Bearer {token}
   "supplier_id": 1,
   "unit_type": "piece",
   "piece_weight": 2.5,
+  "weight_unit": "kg",
   "purchase_price": 1000.00,
   "wholesale_price": 1200.00,
   "retail_price": 1500.00,
   "last_purchase_date": "2026-01-10",
+  "last_sale_date": null,
   "is_active": true,
   "notes": "ملاحظات"
 }
@@ -200,6 +204,8 @@ Authorization: Bearer {token}
 - `sku` يجب أن يكون فريداً
 - إذا كان `unit_type` = `carton`، يجب إضافة `pieces_per_carton`
 - `carton_weight` يُحسب تلقائياً من (pieces_per_carton × piece_weight)
+- `weight_unit` يمكن أن يكون: `kg`, `gram`, `liter`, `ml`, `piece`
+- `last_sale_date` يتم تحديثه تلقائياً عند البيع
 
 **Response (Success - 201):**
 ```json

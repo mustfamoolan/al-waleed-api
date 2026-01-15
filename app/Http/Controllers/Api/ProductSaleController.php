@@ -84,6 +84,9 @@ class ProductSaleController extends BaseController
             $product->updateStock(-$validated['quantity'], 'sale');
             $stockAfter = $product->current_stock;
 
+            // Update last sale date
+            $product->updateLastSaleDate($validated['sale_date']);
+
             // Create inventory movement
             InventoryMovement::create([
                 'product_id' => $product->product_id,

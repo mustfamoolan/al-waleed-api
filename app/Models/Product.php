@@ -20,12 +20,14 @@ class Product extends Model
         'unit_type',
         'pieces_per_carton',
         'piece_weight',
+        'weight_unit',
         'carton_weight',
         'current_stock',
         'purchase_price',
         'wholesale_price',
         'retail_price',
         'last_purchase_date',
+        'last_sale_date',
         'is_active',
         'notes',
     ];
@@ -38,6 +40,7 @@ class Product extends Model
         'wholesale_price' => 'decimal:2',
         'retail_price' => 'decimal:2',
         'last_purchase_date' => 'date',
+        'last_sale_date' => 'date',
         'is_active' => 'boolean',
     ];
 
@@ -115,6 +118,12 @@ class Product extends Model
             return 0;
         }
         return $this->getTotalProfit() / $salesCount;
+    }
+
+    public function updateLastSaleDate($date = null)
+    {
+        $this->last_sale_date = $date ?? now();
+        $this->save();
     }
 
     // Auto-calculate carton weight on save

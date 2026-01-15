@@ -22,6 +22,11 @@ class PurchaseInvoiceItem extends Model
         'discount_percentage',
         'tax_percentage',
         'total_price',
+        'cost_after_purchase',
+        'transport_cost_share',
+        'retail_price',
+        'wholesale_price',
+        'category_name',
         'notes',
     ];
 
@@ -31,6 +36,10 @@ class PurchaseInvoiceItem extends Model
         'discount_percentage' => 'decimal:2',
         'tax_percentage' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'cost_after_purchase' => 'decimal:2',
+        'transport_cost_share' => 'decimal:2',
+        'retail_price' => 'decimal:2',
+        'wholesale_price' => 'decimal:2',
     ];
 
     // Relationships

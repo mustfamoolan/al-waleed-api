@@ -22,6 +22,8 @@ class PurchaseInvoice extends Model
         'total_amount',
         'paid_amount',
         'remaining_amount',
+        'driver_cost',
+        'worker_cost',
         'status',
         'notes',
         'created_by',
@@ -36,6 +38,8 @@ class PurchaseInvoice extends Model
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'remaining_amount' => 'decimal:2',
+        'driver_cost' => 'decimal:2',
+        'worker_cost' => 'decimal:2',
     ];
 
     // Relationships
@@ -84,5 +88,33 @@ class PurchaseInvoice extends Model
             $this->status = 'pending';
         }
         $this->save();
+    }
+
+    /**
+     * Get total transport cost (driver + worker)
+     */
+    public function getTotalTransportCost()
+    {
+        return ($this->driver_cost ?? 0) + ($this->worker_cost ?? 0);
+    }
+
+    /**
+     * Get total number of cartons in all items
+     */
+    public function getTotalCartons()
+    {
+        return $this->items()->sum('quantity');
+    }
+
+    /**
+     * Calculate cost per carton for transport cost distribution
+     */
+    public function getCostPerCarton()
+    {
+        $totalCartons = $this->getTotalCartons();
+        if ($totalCartons <= 0) {
+            return 0;
+        }
+        return $this->getTotalTransportCost() / $totalCartons;
     }
 }
