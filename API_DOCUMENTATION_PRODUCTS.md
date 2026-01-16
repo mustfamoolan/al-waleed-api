@@ -187,25 +187,34 @@ Authorization: Bearer {token}
   "sku": "LAPTOP-001",
   "category_id": 1,
   "supplier_id": 1,
-  "unit_type": "piece",
-  "piece_weight": 2.5,
-  "weight_unit": "kg",
+  "unit_type": "carton",
+  "pieces_per_carton": 24,
+  "piece_weight": 500,
+  "weight_unit": "gram",
+  "current_stock": 10,
   "purchase_price": 1000.00,
   "wholesale_price": 1200.00,
   "retail_price": 1500.00,
   "last_purchase_date": "2026-01-10",
-  "last_sale_date": null,
   "is_active": true,
   "notes": "ملاحظات"
 }
 ```
 
-**ملاحظات:**
-- `sku` يجب أن يكون فريداً
-- إذا كان `unit_type` = `carton`، يجب إضافة `pieces_per_carton`
-- `carton_weight` يُحسب تلقائياً من (pieces_per_carton × piece_weight)
-- `weight_unit` يمكن أن يكون: `kg`, `gram`, `liter`, `ml`, `piece`
-- `last_sale_date` يتم تحديثه تلقائياً عند البيع
+**ملاحظات مهمة:**
+- **`sku`** (اختياري): كود المنتج - يجب أن يكون فريداً إذا تم إدخاله، ويمكن تصويره من الكاميرا (Barcode Scanner)
+- **`unit_type`**: يجب أن يكون `carton` دائماً (التعامل فقط بالكارتون)
+- **`pieces_per_carton`** (مطلوب): عدد القطع في الكارتون الواحد
+- **`piece_weight`** (مطلوب): وزن/حجم القطعة الواحدة (غرام أو ملم)
+- **`weight_unit`**: وحدة قياس وزن/حجم القطعة الواحدة - يمكن أن يكون: `gram` (للوزن) أو `ml` (للسوائل)
+- **`carton_weight`**: يُحسب تلقائياً من (pieces_per_carton × piece_weight) ويعرض الوزن/الحجم الكامل للكارتون
+- **`current_stock`** (اختياري): الكمية المتوفرة عند إنشاء المنتج - إذا لم يتم إدخاله، القيمة الافتراضية `0`
+- **`last_sale_date`**: يتم تحديثه تلقائياً عند البيع
+
+**مثال على حساب الوزن:**
+- كارتون يحتوي على 24 قطعة
+- وزن/حجم القطعة الواحدة: 500 غرام (أو 500 ملم)
+- `carton_weight` التلقائي = 24 × 500 = 12000 غرام (أو 12000 ملم)
 
 **Response (Success - 201):**
 ```json
@@ -607,11 +616,14 @@ Future<void> createProduct() async {
     'https://maktabalwaleed.com/api/products',
     data: {
       'product_name': 'جهاز كمبيوتر محمول',
-      'sku': 'LAPTOP-001',
+      'sku': 'LAPTOP-001', // اختياري
       'category_id': 1,
       'supplier_id': 1,
-      'unit_type': 'piece',
-      'piece_weight': 2.5,
+      'unit_type': 'carton',
+      'pieces_per_carton': 24,
+      'piece_weight': 500,
+      'weight_unit': 'gram',
+      'current_stock': 10, // اختياري - القيمة الافتراضية: 0
       'purchase_price': 1000.00,
       'wholesale_price': 1200.00,
       'retail_price': 1500.00,
@@ -712,7 +724,8 @@ Future<void> getProducts() async {
   "message": "Validation failed",
   "errors": {
     "sku": ["The sku has already been taken."],
-    "purchase_price": ["The purchase price field is required."]
+    "purchase_price": ["The purchase price field is required."],
+    "pieces_per_carton": ["The pieces per carton field is required when unit type is carton."]
   }
 }
 ```
@@ -748,11 +761,12 @@ Future<void> getProducts() async {
 
 ## 9. ملاحظات مهمة
 
-1. **SKU:** يجب أن يكون فريداً ويمكن تصويره من الكاميرا (Barcode Scanner)
-2. **المخزون:** يتم تحديثه تلقائياً من فواتير الشراء والمرتجعات والمبيعات
-3. **الربح:** يُحسب عند البيع بناءً على سعر الشراء وقت الشراء
-4. **الوزن:** وزن الكارتون يُحسب تلقائياً من (عدد القطع × وزن القطعة)
-5. **حركات المخزون:** يتم إنشاؤها تلقائياً عند:
+1. **SKU:** اختياري - يجب أن يكون فريداً إذا تم إدخاله، ويمكن تصويره من الكاميرا (Barcode Scanner)
+2. **current_stock:** يمكن إدخال الكمية المتوفرة عند إنشاء المنتج (اختياري - القيمة الافتراضية: 0)
+3. **المخزون:** يتم تحديثه تلقائياً من فواتير الشراء والمرتجعات والمبيعات، ويمكن إدخال الكمية الأولية عند إنشاء المنتج
+4. **الربح:** يُحسب عند البيع بناءً على سعر الشراء وقت الشراء
+5. **الوزن:** وزن الكارتون يُحسب تلقائياً من (عدد القطع × وزن القطعة الواحدة)
+6. **حركات المخزون:** يتم إنشاؤها تلقائياً عند:
    - تأكيد فاتورة شراء
    - تأكيد فاتورة مرتجع
    - تسجيل مبيعة

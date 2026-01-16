@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\RepresentativeAuthController;
+use App\Http\Controllers\Api\RepresentativeBalanceController;
+use App\Http\Controllers\Api\RepresentativeSalaryController;
+use App\Http\Controllers\Api\RepresentativeTargetController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -42,5 +45,17 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// Add other representative routes here
+// Representative routes (Authenticated)
+Route::middleware('auth:sanctum')->group(function () {
+    // My Targets
+    Route::get('/my/targets', [RepresentativeTargetController::class, 'myTargets']);
+    Route::get('/my/targets/{target}', [RepresentativeTargetController::class, 'showMyTarget']);
+    
+    // My Balance
+    Route::get('/my/balance', [RepresentativeBalanceController::class, 'myBalance']);
+    Route::get('/my/balance/transactions', [RepresentativeBalanceController::class, 'myTransactions']);
+    
+    // My Salary
+    Route::get('/my/salary/{month?}', [RepresentativeSalaryController::class, 'mySalary']);
+});
 

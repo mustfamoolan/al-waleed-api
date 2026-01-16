@@ -34,4 +34,30 @@ class Representative extends Authenticatable
     {
         return $this->password_hash;
     }
+
+    // Relationships
+    public function salaries()
+    {
+        return $this->hasMany(RepresentativeSalary::class, 'rep_id');
+    }
+
+    public function targets()
+    {
+        return $this->hasMany(RepresentativeTarget::class, 'rep_id');
+    }
+
+    public function balance()
+    {
+        return $this->hasOne(RepresentativeBalance::class, 'rep_id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(RepresentativeBalanceTransaction::class, 'rep_id');
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(ProductSale::class, 'representative_id');
+    }
 }

@@ -113,6 +113,29 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
     Route::apiResource('representatives', RepresentativeController::class);
     Route::post('representatives/{representative}/upload-image', [RepresentativeController::class, 'uploadImage']);
 
+    // Representative Salaries
+    Route::get('representatives/{representative}/salaries', [\App\Http\Controllers\Api\RepresentativeSalaryController::class, 'index']);
+    Route::post('representatives/{representative}/salaries', [\App\Http\Controllers\Api\RepresentativeSalaryController::class, 'store']);
+    Route::get('representatives/{representative}/salaries/{salary}', [\App\Http\Controllers\Api\RepresentativeSalaryController::class, 'show']);
+    Route::put('representatives/{representative}/salaries/{salary}', [\App\Http\Controllers\Api\RepresentativeSalaryController::class, 'update']);
+    Route::post('representatives/{representative}/salaries/calculate', [\App\Http\Controllers\Api\RepresentativeSalaryController::class, 'calculate']);
+
+    // Representative Targets
+    Route::get('representatives/{representative}/targets', [\App\Http\Controllers\Api\RepresentativeTargetController::class, 'index']);
+    Route::post('representatives/{representative}/targets', [\App\Http\Controllers\Api\RepresentativeTargetController::class, 'store']);
+    Route::get('representatives/{representative}/targets/{target}', [\App\Http\Controllers\Api\RepresentativeTargetController::class, 'show']);
+    Route::put('representatives/{representative}/targets/{target}', [\App\Http\Controllers\Api\RepresentativeTargetController::class, 'update']);
+    Route::delete('representatives/{representative}/targets/{target}', [\App\Http\Controllers\Api\RepresentativeTargetController::class, 'destroy']);
+    Route::post('representatives/{representative}/targets/{target}/calculate', [\App\Http\Controllers\Api\RepresentativeTargetController::class, 'calculateProgress']);
+    Route::post('representatives/{representative}/targets/{target}/complete', [\App\Http\Controllers\Api\RepresentativeTargetController::class, 'completeTarget']);
+
+    // Representative Balance
+    Route::get('representatives/{representative}/balance', [\App\Http\Controllers\Api\RepresentativeBalanceController::class, 'show']);
+    Route::get('representatives/{representative}/balance/transactions', [\App\Http\Controllers\Api\RepresentativeBalanceController::class, 'transactions']);
+    Route::post('representatives/{representative}/balance/withdraw', [\App\Http\Controllers\Api\RepresentativeBalanceController::class, 'withdraw']);
+    Route::post('representatives/{representative}/balance/deposit', [\App\Http\Controllers\Api\RepresentativeBalanceController::class, 'deposit']);
+    Route::post('representatives/{representative}/balance/adjust', [\App\Http\Controllers\Api\RepresentativeBalanceController::class, 'adjust']);
+
     Route::apiResource('pickers', PickerController::class);
     Route::post('pickers/{picker}/upload-image', [PickerController::class, 'uploadImage']);
 

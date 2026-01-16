@@ -23,6 +23,7 @@ class ProductSale extends Model
         'profit_percentage',
         'notes',
         'created_by',
+        'representative_id',
     ];
 
     protected $casts = [
@@ -44,6 +45,11 @@ class ProductSale extends Model
     public function creator()
     {
         return $this->belongsTo(Manager::class, 'created_by');
+    }
+
+    public function representative()
+    {
+        return $this->belongsTo(Representative::class, 'representative_id');
     }
 
     // Methods

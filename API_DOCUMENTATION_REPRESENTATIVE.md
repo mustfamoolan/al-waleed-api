@@ -4,6 +4,24 @@
 
 هذا الـ API مخصص للممثلين (Representatives). الممثلون لديهم API منفصل تماماً عن API المدير والموظف.
 
+### ⚠️ ملاحظة مهمة جداً: الفرق بين المندوبين والموظفين (السائقين)
+
+**المندوبين (Representatives):**
+
+- ✅ المفتاح الأساسي: `rep_id`
+- ❌ **لا يحتوي على حقل `job_role`**
+- ✅ API منفصل: `/representative-api/*`
+- 📄 جدول منفصل: `representatives`
+
+**الموظفين - السائقين (Employees):**
+
+- ✅ المفتاح الأساسي: `emp_id`
+- ✅ **يحتوي على حقل `job_role`** (مثال: "سائق", "محاسب")
+- ❌ لا يوجد API منفصل (يستخدم Manager API)
+- 📄 جدول منفصل: `employees`
+
+**📖 للمزيد من التفاصيل، راجع:** `DIFFERENCE_REPRESENTATIVES_EMPLOYEES.md`
+
 ## Base URL
 
 ```
