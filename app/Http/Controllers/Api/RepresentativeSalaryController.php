@@ -22,7 +22,7 @@ class RepresentativeSalaryController extends BaseController
     {
         $representative = $request->user();
         $month = $month ?? date('Y-m');
-        
+
         $salary = \App\Models\RepresentativeSalary::where('rep_id', $representative->rep_id)
             ->where('month', $month)
             ->with(['paidBy'])
@@ -131,7 +131,7 @@ class RepresentativeSalaryController extends BaseController
 
             if (isset($validated['status'])) {
                 $updateData['status'] = $validated['status'];
-                
+
                 // If marking as paid, update paid_at and paid_by
                 if ($validated['status'] === 'paid' && $salary->status !== 'paid') {
                     $updateData['paid_at'] = now();
@@ -172,9 +172,18 @@ class RepresentativeSalaryController extends BaseController
     {
         try {
             $month = $request->get('month', date('Y-m'));
-            
-            // Get base salary (default 1,000,000 IQD)
-            $baseSalary = 1000000;
+
+            // Get base salary from request, or from last salary, or use default
+            if ($request->has('base_salary') && $request->get('base_salary') !== null) {
+                $baseSalary = $request->get('base_salary');
+            } else {
+                // Get from last salary if exists
+                $lastSalary = RepresentativeSalary::where('rep_id', $representative->rep_id)
+                    ->orderBy('month', 'desc')
+                    ->first();
+
+                $baseSalary = $lastSalary ? $lastSalary->base_salary : 1000000; // Default 1,000,000 IQD
+            }
 
             // Calculate total bonuses from completed targets in this month
             $totalBonuses = $representative->targets()
