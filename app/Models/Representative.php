@@ -36,6 +36,25 @@ class Representative extends Authenticatable
     }
 
     // Relationships
+    public function customers()
+    {
+        return $this->belongsToMany(Customer::class, 'customer_representatives', 'representative_id', 'customer_id')
+            ->withPivot('assigned_at', 'assigned_by', 'notes')
+            ->withTimestamps();
+    }
+
+    public function saleInvoicesAsSeller()
+    {
+        return $this->hasMany(SaleInvoice::class, 'representative_id');
+    }
+
+    public function purchasesAsBuyer()
+    {
+        return $this->hasMany(SaleInvoice::class, 'buyer_id')
+            ->where('buyer_type', 'representative');
+    }
+
+    // Representative-specific relationships (from previous implementation)
     public function salaries()
     {
         return $this->hasMany(RepresentativeSalary::class, 'rep_id');

@@ -35,4 +35,11 @@ class Employee extends Authenticatable
     {
         return $this->password_hash;
     }
+
+    // Relationships
+    public function purchasesAsBuyer()
+    {
+        return $this->hasMany(SaleInvoice::class, 'buyer_id')
+            ->where('buyer_type', 'employee');
+    }
 }

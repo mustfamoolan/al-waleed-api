@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\JournalEntryController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductSaleController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\SaleInvoiceController;
+use App\Http\Controllers\Api\CustomerPaymentController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -200,6 +203,28 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
     // Product Sales
     Route::apiResource('product-sales', ProductSaleController::class);
     Route::get('product-sales/profit-report', [ProductSaleController::class, 'profitReport']);
+
+    // Customers Management
+    Route::apiResource('customers', CustomerController::class);
+    Route::get('customers/{customer}/balance', [CustomerController::class, 'balance']);
+    Route::get('customers/{customer}/transactions', [CustomerController::class, 'transactions']);
+    Route::get('customers/{customer}/invoices', [CustomerController::class, 'invoices']);
+    Route::get('customers/{customer}/representatives', [CustomerController::class, 'representatives']);
+    Route::post('customers/{customer}/representatives/{representative}', [CustomerController::class, 'assignRepresentative']);
+    Route::delete('customers/{customer}/representatives/{representative}', [CustomerController::class, 'removeRepresentative']);
+
+    // Sale Invoices (Smart)
+    Route::apiResource('sale-invoices', SaleInvoiceController::class);
+    Route::post('sale-invoices/{sale_invoice}/duplicate', [SaleInvoiceController::class, 'duplicate']);
+    Route::post('sale-invoices/{sale_invoice}/post', [SaleInvoiceController::class, 'post']);
+    Route::get('sale-invoices/{sale_invoice}/payments', [SaleInvoiceController::class, 'payments']);
+
+    // Customer Payments
+    Route::apiResource('customer-payments', CustomerPaymentController::class);
+    Route::post('customer-payments/{payment}/apply-to-invoice/{invoice}', [CustomerPaymentController::class, 'applyToInvoice']);
+
+    // Representative Sales (المبيعات من المندوب)
+    Route::get('representatives/{representative}/sales', [SaleInvoiceController::class, 'index']);
 });
 
 // Protected API routes
