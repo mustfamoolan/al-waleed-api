@@ -38,6 +38,8 @@ class StorePurchaseInvoiceRequest extends FormRequest
             'items.*.product_name' => ['required', 'string', 'max:255'],
             'items.*.product_code' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit_type' => ['required', 'in:piece,carton'],
+            'items.*.carton_count' => ['nullable', 'numeric', 'min:0', 'required_if:items.*.unit_type,carton'],
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items.*.tax_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],

@@ -30,6 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
             'manager.only' => \App\Http\Middleware\ManagerOnly::class,
+            'employee.only' => \App\Http\Middleware\EmployeeOnly::class,
+            'picker.only' => \App\Http\Middleware\PickerOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

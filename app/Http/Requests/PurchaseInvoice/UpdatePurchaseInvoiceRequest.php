@@ -41,6 +41,8 @@ class UpdatePurchaseInvoiceRequest extends FormRequest
             'items.*.product_name' => ['required_with:items', 'string', 'max:255'],
             'items.*.product_code' => ['nullable', 'string', 'max:255'],
             'items.*.quantity' => ['required_with:items', 'numeric', 'min:0.01'],
+            'items.*.unit_type' => ['required_with:items', 'in:piece,carton'],
+            'items.*.carton_count' => ['nullable', 'numeric', 'min:0', 'required_if:items.*.unit_type,carton'],
             'items.*.unit_price' => ['required_with:items', 'numeric', 'min:0'],
             'items.*.discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items.*.tax_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],

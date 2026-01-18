@@ -15,6 +15,8 @@ class Customer extends Model
         'customer_name',
         'phone_number',
         'address',
+        'location_lat',
+        'location_lng',
         'total_debt',
         'total_paid',
         'last_payment_date',
@@ -24,6 +26,8 @@ class Customer extends Model
     ];
 
     protected $casts = [
+        'location_lat' => 'decimal:8',
+        'location_lng' => 'decimal:8',
         'total_debt' => 'decimal:2',
         'total_paid' => 'decimal:2',
         'last_payment_date' => 'date',

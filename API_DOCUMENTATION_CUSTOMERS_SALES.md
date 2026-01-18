@@ -428,6 +428,19 @@ Smart Sale Invoices support 4 buyer types:
 - **Office**: `representative_id: null` (sold by Manager/Employee in office)
 - **Representative**: `representative_id: {id}` (sold by specific representative)
 
+**Request Workflow (سير العمل):**
+الآن جميع الفواتير (من المكتب أو من المندوب) تمر عبر سير عمل متكامل:
+1. **إنشاء الطلب**: `request_status = pending_approval`, `delivery_status = not_prepared`
+2. **موافقة المدير**: `request_status = approved` (يتطلب موافقة المدير)
+3. **التجهيز**: `delivery_status = preparing → prepared` (من المجهز)
+4. **تعيين السائق**: `delivery_status = assigned_to_driver` (من المجهز)
+5. **التوصيل**: `delivery_status = in_delivery → delivered` (من السائق)
+
+**حالات الفاتورة (Two Separate Fields):**
+- **`status`** (حالة الدفع/الدين): `pending`, `paid`, `partial`, `overdue`, `cancelled`
+- **`request_status`** (حالة الموافقة): `pending_approval`, `approved`, `rejected`
+- **`delivery_status`** (حالة التوصيل): `not_prepared`, `preparing`, `prepared`, `assigned_to_driver`, `in_delivery`, `delivered`, `cancelled`
+
 ---
 
 ### 1. List Sale Invoices
@@ -438,7 +451,10 @@ Smart Sale Invoices support 4 buyer types:
 - `buyer_type` (optional): Filter by buyer type
 - `customer_id` (optional): Filter by customer
 - `representative_id` (optional): Filter by seller representative
-- `status` (optional): Filter by status
+- `status` (optional): Filter by payment status (`pending`, `paid`, `partial`, `overdue`, `cancelled`)
+- `request_status` (optional): Filter by request status (`pending_approval`, `approved`, `rejected`)
+- `delivery_status` (optional): Filter by delivery status (`not_prepared`, `preparing`, `prepared`, `assigned_to_driver`, `in_delivery`, `delivered`, `cancelled`)
+- `request_type` (optional): Filter by request type (`office`, `representative`)
 - `from_date` (optional): Filter from date
 - `to_date` (optional): Filter to date
 - `search` (optional): Search by invoice number or buyer name
@@ -476,6 +492,17 @@ Smart Sale Invoices support 4 buyer types:
         "remaining_amount": 1000000.00,
         "payment_method": "credit",
         "status": "pending",
+        "request_type": "office",
+        "request_status": "approved",
+        "delivery_status": "delivered",
+        "prepared_by": 1,
+        "prepared_at": "2026-01-18T10:00:00.000000Z",
+        "assigned_to_driver": 1,
+        "assigned_at": "2026-01-18T10:30:00.000000Z",
+        "delivered_by": 1,
+        "delivered_at": "2026-01-18T14:00:00.000000Z",
+        "approved_by": 1,
+        "approved_at": "2026-01-18T09:00:00.000000Z",
         "buyer_display_name": "Ahmed Ali",
         "is_overdue": false,
         "items": [
@@ -669,7 +696,78 @@ Smart Sale Invoices support 4 buyer types:
 
 ---
 
-### 10. Post (Confirm) Sale Invoice
+### 10. Pending Approvals (Manager Only)
+
+**Endpoint:** `GET /api/sale-invoices/pending-approvals`
+
+**Query Parameters:**
+- `request_type` (optional): Filter by `office` or `representative`
+- `per_page` (optional)
+
+**Response:** قائمة طلبات الفواتير المعلقة للموافقة (`request_status = pending_approval`)
+
+**ملاحظة:** فقط المدير يمكنه الوصول لهذا endpoint
+
+---
+
+### 11. Approve Invoice Request (Manager Only)
+
+**Endpoint:** `POST /api/sale-invoices/{sale_invoice}/approve`
+
+**القيود:** فقط إذا `request_status = pending_approval`
+
+**Actions:**
+- `request_status` → `approved`
+- `approved_by` = manager_id
+- `approved_at` = now()
+
+**Response:** الفاتورة بعد الموافقة (جاهزة للتجهيز)
+
+---
+
+### 12. Reject Invoice Request (Manager Only)
+
+**Endpoint:** `POST /api/sale-invoices/{sale_invoice}/reject`
+
+**Request Body:**
+- `rejection_reason` (required): سبب الرفض (string, max 500)
+
+**القيود:** فقط إذا `request_status = pending_approval`
+
+**Actions:**
+- `request_status` → `rejected`
+- `approved_by` = manager_id
+- `approved_at` = now()
+- `rejection_reason` = من Request
+- `delivery_status` → `cancelled`
+- `status` → `cancelled`
+
+**Response:** الفاتورة بعد الرفض
+
+---
+
+### 13. Representative Sales Report (Manager Only)
+
+**Endpoint:** `GET /api/representatives/{representative}/sales-report`
+
+**Query Parameters:**
+- `from_date` (optional): تاريخ البداية
+- `to_date` (optional): تاريخ النهاية
+- `month` (optional): الشهر بصيغة Y-m (مثال: 2026-01)
+
+**Response Fields:**
+- `representative`: بيانات المندوب
+- `period`: الفترة المحددة
+- `total_sales`: `total_invoices`, `total_amount`, `cash_sales`, `credit_sales`
+- `customers`: `total_customers`, `total_debt`, `top_customers` (أكثر 10 زبائن مبيعاً)
+- `today_sales`: `invoices_count`, `total_amount`
+- `delivery_status`: توزيع حسب حالة التوصيل
+
+**ملاحظة:** يتم حساب الأهداف والمكافآت بناءً على الفواتير المكتملة (`delivery_status = delivered`)
+
+---
+
+### 14. Post (Confirm) Sale Invoice
 
 **Endpoint:** `POST /api/sale-invoices/{sale_invoice}/post`
 
@@ -951,30 +1049,137 @@ Every invoice creation or payment creates a transaction record:
 
 ## Business Logic
 
-### Invoice Status Flow
+### Complete Invoice Workflow (سير العمل الكامل)
 
-1. **draft**: Initial state when created
-   - Can be updated or deleted
-   - Inventory not affected
-   - Balance not affected
+جميع الفواتير (من المكتب أو من المندوب) تمر عبر سير عمل متكامل:
 
-2. **pending**: After posting (`POST /post`)
-   - Inventory updated
-   - Balance updated (if credit customer)
-   - Cannot be deleted (can be cancelled)
+```
+1. إنشاء الطلب (Create Request):
+   - request_status = pending_approval
+   - delivery_status = not_prepared
+   - status = pending (للدفع)
+   - من المكتب أو المندوب
 
-3. **paid**: All amount paid
+2. موافقة المدير (Manager Approval):
+   - request_status = approved
+   - approved_by = manager_id
+   - approved_at = now()
+
+3. التجهيز (Preparation):
+   - delivery_status = preparing (من المجهز)
+   - prepared_by = employee_id
+   - delivery_status = prepared (انتهاء التجهيز)
+   - prepared_at = now()
+
+4. تعيين السائق (Assign Driver):
+   - assigned_to_driver = driver_id
+   - assigned_at = now()
+   - delivery_status = assigned_to_driver
+
+5. التوصيل (Delivery):
+   - delivery_status = in_delivery (السائق بدأ التوصيل)
+   - delivery_status = delivered (السائق أكد التسليم)
+   - delivered_by = driver_id
+   - delivered_at = now()
+   - إذا payment_method = cash: status = paid
+   - تحديث رصيد الزبون إذا credit
+```
+
+### Invoice Status Flow (حالة الدفع/الدين)
+
+**`status` Field (Payment Status):**
+
+1. **pending**: في الانتظار (دين)
+   - `remaining_amount > 0`
+   - `paid_amount == 0` أو `paid_amount < total_amount`
+
+2. **paid**: مدفوعة كاملة
    - `paid_amount == total_amount`
    - `remaining_amount == 0`
 
-4. **partial**: Partially paid
+3. **partial**: مدفوعة جزئياً
    - `paid_amount > 0` and `paid_amount < total_amount`
+   - `remaining_amount > 0`
 
-5. **overdue**: Past due date with remaining amount
+4. **overdue**: متأخرة
    - `due_date < now()` and `remaining_amount > 0`
+   - فقط للزبائن (`buyer_type = customer`)
 
-6. **cancelled**: Cancelled invoice
-   - Reverses inventory and balance changes
+5. **cancelled**: ملغية
+   - يمكن إلغاء الفاتورة في أي وقت قبل التسليم
+   - إلغاء من المندوب قبل الموافقة
+   - إلغاء من المدير في أي وقت
+
+### Request Status Flow (حالة الموافقة)
+
+**`request_status` Field:**
+
+1. **pending_approval**: في انتظار موافقة المدير
+   - الحالة الأولية عند إنشاء الفاتورة من المكتب أو المندوب
+   - لا يمكن التجهيز حتى الموافقة
+
+2. **approved**: معتمدة من المدير
+   - المدير وافق على الطلب
+   - يمكن للمجهز رؤيتها وتجهيزها
+   - `approved_by` = manager_id
+   - `approved_at` = now()
+
+3. **rejected**: مرفوضة من المدير
+   - المدير رفض الطلب
+   - `delivery_status` → `cancelled`
+   - `status` → `cancelled`
+   - `rejection_reason` = سبب الرفض
+
+### Delivery Status Flow (حالة التوصيل)
+
+**`delivery_status` Field:**
+
+1. **not_prepared**: لم تجهز
+   - الحالة الأولية بعد إنشاء الفاتورة
+   - لا يمكن البدء بالتجهيز إلا بعد الموافقة
+
+2. **preparing**: في التجهيز
+   - المجهز بدأ تجهيز الفاتورة
+   - `prepared_by` = employee_id
+
+3. **prepared**: تم التجهيز
+   - المجهز أنهى التجهيز
+   - `prepared_at` = now()
+   - جاهزة لتعيين السائق
+
+4. **assigned_to_driver**: معينة للسائق
+   - المجهز عين سائق للفاتورة
+   - `assigned_to_driver` = driver_id
+   - `assigned_at` = now()
+   - السائق يستطيع رؤيتها وبدء التوصيل
+
+5. **in_delivery**: في التوصيل
+   - السائق بدأ التوصيل للزبون
+   - في الطريق للزبون
+
+6. **delivered**: تم التسليم
+   - السائق أكد التسليم
+   - `delivered_by` = driver_id
+   - `delivered_at` = now()
+   - إذا `payment_method = cash`: `status` → `paid`
+   - تحديث رصيد الزبون إذا `payment_method = credit`
+   - نهاية سير العمل
+
+7. **cancelled**: ملغية
+   - يمكن الإلغاء من أي حالة قبل `delivered`
+   - لا يمكن تغييرها بعد التسليم
+
+**ترتيب صارم للحالات:**
+```
+not_prepared → preparing → prepared → assigned_to_driver → in_delivery → delivered
+                                    ↓
+                              cancelled (من أي حالة قبل delivered)
+```
+
+**القيود:**
+- لا يمكن القفز على الخطوات
+- لا يمكن التراجع (إلا بالإلغاء)
+- كل خطوة تحتاج الخطوة السابقة
 
 ### Special Discount Calculation
 
@@ -1005,6 +1210,8 @@ When a payment is created:
 
 ### Invoice Posting
 
+**ملاحظة:** الآن `post` يتم تلقائياً عند التسليم (`delivery_status = delivered`) من السائق، أو يمكن للمدير عمل `post` مباشرة للفواتير من المكتب.
+
 When an invoice is posted:
 
 1. **Inventory Update:**
@@ -1019,7 +1226,31 @@ When an invoice is posted:
    - Transaction recorded (type: `invoice`, amount: positive)
 
 3. **Invoice Status:**
-   - Changed from `draft` to `pending`
+   - Changed from `draft` to `pending` (إذا كان draft)
+   - أو يبقى `pending` إذا كان بالفعل pending
+
+### Manager Endpoints
+
+**1. Pending Approvals:**
+- `GET /api/sale-invoices/pending-approvals`: قائمة طلبات الفواتير المعلقة
+- يمكن فلترة حسب `request_type` (office, representative)
+
+**2. Approve/Reject:**
+- `POST /api/sale-invoices/{invoice}/approve`: الموافقة على الطلب
+- `POST /api/sale-invoices/{invoice}/reject`: رفض الطلب مع سبب
+
+**3. Representative Sales Report:**
+- `GET /api/representatives/{representative}/sales-report`: تقرير مبيعات المندوب
+- يشمل: إجمالي المبيعات، أكثر الزبائن مبيعاً، ديون الزبائن، كاش البيع
+- يمكن فلترة حسب التاريخ أو الشهر
+
+**4. Approve Returns:**
+- `POST /api/sale-returns/{return}/approve`: الموافقة على الإرجاع
+- `POST /api/sale-returns/{return}/reject`: رفض الإرجاع
+
+**5. Approve Driver Payments:**
+- `POST /api/driver-payments/{payment}/approve`: الموافقة على دفعة السائق
+- `POST /api/driver-payments/{payment}/reject`: رفض دفعة السائق
 
 ---
 
@@ -1154,13 +1385,32 @@ When an invoice is posted:
 
 ## Summary
 
-This API provides a comprehensive system for managing customers, smart sale invoices, and payments. The system is flexible enough to handle:
+This API provides a comprehensive system for managing customers, smart sale invoices, and payments with a complete workflow system. The system supports:
 
-- Regular customers with credit/debt tracking
-- Walk-in customers (cash only)
-- Employee/Representative purchases with special discounts
-- Sales from office or by representatives
-- Automatic balance and transaction tracking
+- **Smart Sale Invoices** with 4 buyer types (customer, walk_in, employee, representative)
+- **Complete Workflow**: من إنشاء الطلب → موافقة المدير → التجهيز → التوصيل → التسليم
+- **Two Separate Status Fields**: `status` (للدفع) و `delivery_status` (للتوصيل)
+- **Request Approval System**: جميع الفواتير تحتاج موافقة المدير قبل التجهيز
+- **Preparation System**: المجهز (Employee) يجهز الفواتير ويعين السائق
+- **Delivery System**: السائق (Picker) يوصّل الفواتير ويؤكد التسليم
+- **Return System**: السائق يستطيع عمل إرجاع (بعد التسليم)
+- **Driver Payment System**: السائق يستطيع تسجيل دفعات (بعد التسليم)
+- **Automatic Balance Tracking**: تتبع تلقائي للرصيد والمعاملات
+- **Sales Reports**: تقارير مبيعات المندوبين مع تفاصيل كاملة
 
-All endpoints are protected and require manager authentication. The system automatically handles inventory updates, balance tracking, and transaction recording.
+### Roles & Permissions
+
+- **Manager**: جميع الصلاحيات - الموافقة، الرفض، التقارير، إدارة الإرجاعات والدفعات
+- **Employee (Preparer)**: التجهيز وتعيين السائق
+- **Picker (Driver)**: التوصيل، الإرجاع، تسجيل الدفعات
+- **Representative**: إنشاء طلبات الفواتير (فقط لزبائنه)، تحديث موقع الزبون
+
+### Important Notes
+
+1. جميع الفواتير تحتاج موافقة المدير قبل التجهيز
+2. العنوان والموقع يُحفظان في جدول customers وليس في الفاتورة
+3. الإرجاع والدفع ممكنان فقط بعد التسليم
+4. جميع الإرجاعات والدفعات تحتاج موافقة المدير
+5. حساب أهداف المندوب بناءً على الفواتير المكتملة (`delivery_status = delivered`)
+6. سير العمل صارم ولا يمكن القفز على الخطوات
 

@@ -218,6 +218,22 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
     Route::post('sale-invoices/{sale_invoice}/duplicate', [SaleInvoiceController::class, 'duplicate']);
     Route::post('sale-invoices/{sale_invoice}/post', [SaleInvoiceController::class, 'post']);
     Route::get('sale-invoices/{sale_invoice}/payments', [SaleInvoiceController::class, 'payments']);
+    Route::get('sale-invoices/pending-approvals', [SaleInvoiceController::class, 'pendingApprovals']);
+    Route::post('sale-invoices/{sale_invoice}/approve', [SaleInvoiceController::class, 'approveRequest']);
+    Route::post('sale-invoices/{sale_invoice}/reject', [SaleInvoiceController::class, 'rejectRequest']);
+
+    // Representative Sales Reports
+    Route::get('representatives/{representative}/sales-report', [SaleInvoiceController::class, 'representativeSalesReport']);
+
+    // Sale Returns
+    Route::apiResource('sale-returns', \App\Http\Controllers\Api\SaleReturnController::class);
+    Route::post('sale-returns/{sale_return}/approve', [\App\Http\Controllers\Api\SaleReturnController::class, 'approve']);
+    Route::post('sale-returns/{sale_return}/reject', [\App\Http\Controllers\Api\SaleReturnController::class, 'reject']);
+
+    // Driver Payments
+    Route::apiResource('driver-payments', \App\Http\Controllers\Api\DriverPaymentController::class);
+    Route::post('driver-payments/{driver_payment}/approve', [\App\Http\Controllers\Api\DriverPaymentController::class, 'approve']);
+    Route::post('driver-payments/{driver_payment}/reject', [\App\Http\Controllers\Api\DriverPaymentController::class, 'reject']);
 
     // Customer Payments
     Route::apiResource('customer-payments', CustomerPaymentController::class);
@@ -225,6 +241,35 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
 
     // Representative Sales (المبيعات من المندوب)
     Route::get('representatives/{representative}/sales', [SaleInvoiceController::class, 'index']);
+});
+
+// Preparer Routes (Employee only)
+Route::middleware(['auth:sanctum', 'employee.only'])->group(function () {
+    Route::get('/preparer/invoices', [\App\Http\Controllers\Api\PreparerSaleInvoiceController::class, 'index']);
+    Route::get('/preparer/invoices/{invoice}', [\App\Http\Controllers\Api\PreparerSaleInvoiceController::class, 'show']);
+    Route::post('/preparer/invoices/{invoice}/start-preparing', [\App\Http\Controllers\Api\PreparerSaleInvoiceController::class, 'startPreparing']);
+    Route::post('/preparer/invoices/{invoice}/complete-preparing', [\App\Http\Controllers\Api\PreparerSaleInvoiceController::class, 'completePreparing']);
+    Route::post('/preparer/invoices/{invoice}/assign-driver', [\App\Http\Controllers\Api\PreparerSaleInvoiceController::class, 'assignToDriver']);
+});
+
+// Driver Routes (Picker only)
+Route::middleware(['auth:sanctum', 'picker.only'])->group(function () {
+    // Driver Invoices
+    Route::get('/driver/invoices', [\App\Http\Controllers\Api\DriverSaleInvoiceController::class, 'index']);
+    Route::get('/driver/invoices/{invoice}', [\App\Http\Controllers\Api\DriverSaleInvoiceController::class, 'show']);
+    Route::post('/driver/invoices/{invoice}/start-delivery', [\App\Http\Controllers\Api\DriverSaleInvoiceController::class, 'startDelivery']);
+    Route::post('/driver/invoices/{invoice}/mark-delivered', [\App\Http\Controllers\Api\DriverSaleInvoiceController::class, 'markAsDelivered']);
+
+    // Driver Returns
+    Route::get('/driver/returns', [\App\Http\Controllers\Api\DriverSaleReturnController::class, 'index']);
+    Route::post('/driver/returns', [\App\Http\Controllers\Api\DriverSaleReturnController::class, 'store']);
+    Route::get('/driver/returns/{return}', [\App\Http\Controllers\Api\DriverSaleReturnController::class, 'show']);
+
+    // Driver Payments
+    Route::get('/driver/payments', [\App\Http\Controllers\Api\DriverPaymentController::class, 'index']);
+    Route::post('/driver/payments', [\App\Http\Controllers\Api\DriverPaymentController::class, 'store']);
+    Route::get('/driver/payments/{payment}', [\App\Http\Controllers\Api\DriverPaymentController::class, 'show']);
+    Route::get('/driver/customers/{customer}/balance', [\App\Http\Controllers\Api\DriverPaymentController::class, 'customerBalance']);
 });
 
 // Protected API routes

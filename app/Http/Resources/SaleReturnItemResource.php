@@ -5,8 +5,9 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\ProductResource;
+use App\Http\Resources\SaleInvoiceItemResource;
 
-class SaleInvoiceItemResource extends JsonResource
+class SaleReturnItemResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,23 +17,18 @@ class SaleInvoiceItemResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'item_id' => $this->item_id,
-            'invoice_id' => $this->invoice_id,
+            'return_item_id' => $this->return_item_id,
+            'return_id' => $this->return_id,
+            'sale_invoice_item_id' => $this->sale_invoice_item_id,
+            'invoice_item' => new SaleInvoiceItemResource($this->whenLoaded('invoiceItem')),
             'product_id' => $this->product_id,
             'product' => new ProductResource($this->whenLoaded('product')),
-            'product_name' => $this->product_name,
-            'product_code' => $this->product_code,
-            'quantity' => $this->quantity,
+            'quantity_returned' => $this->quantity_returned,
             'unit_type' => $this->unit_type,
             'carton_count' => $this->carton_count,
             'unit_price' => $this->unit_price,
-            'purchase_price_at_sale' => $this->purchase_price_at_sale,
-            'discount_percentage' => $this->discount_percentage,
-            'tax_percentage' => $this->tax_percentage,
-            'total_price' => $this->total_price,
-            'profit_amount' => $this->profit_amount,
-            'profit_percentage' => $this->profit_percentage,
-            'notes' => $this->notes,
+            'total_return_price' => $this->total_return_price,
+            'reason' => $this->reason,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -87,8 +87,13 @@ class PurchaseInvoiceController extends BaseController
                 'created_by' => $manager->manager_id,
             ]);
 
-            // Calculate transport cost distribution
-            $totalCartons = array_sum(array_column($validated['items'], 'quantity'));
+            // Calculate transport cost distribution (based on carton_count if carton, quantity if piece)
+            $totalCartons = 0;
+            foreach ($validated['items'] as $itemData) {
+                if (($itemData['unit_type'] ?? 'carton') === 'carton') {
+                    $totalCartons += $itemData['carton_count'] ?? $itemData['quantity'];
+                }
+            }
             $totalTransportCost = ($validated['driver_cost'] ?? 0) + ($validated['worker_cost'] ?? 0);
             $costPerCarton = $totalCartons > 0 ? $totalTransportCost / $totalCartons : 0;
 
@@ -108,14 +113,25 @@ class PurchaseInvoiceController extends BaseController
                     $itemTotal += $tax;
                 }
 
-                // Calculate transport cost share for this item
-                $transportCostShare = $itemData['quantity'] * $costPerCarton;
-                $costAfterPurchase = $itemData['unit_price'] + $costPerCarton;
-
                 // Get product info if product_id is provided
                 $product = null;
                 if (isset($itemData['product_id'])) {
                     $product = Product::find($itemData['product_id']);
+                }
+
+                // Calculate carton_count if not provided
+                $unitType = $itemData['unit_type'] ?? 'carton';
+                $cartonCount = null;
+                if ($unitType === 'carton') {
+                    $cartonCount = $itemData['carton_count'] ?? $itemData['quantity'];
+                }
+
+                // Calculate transport cost share for this item (only for cartons)
+                $transportCostShare = 0;
+                $costAfterPurchase = $itemData['unit_price'];
+                if ($unitType === 'carton' && $cartonCount > 0) {
+                    $transportCostShare = $cartonCount * $costPerCarton;
+                    $costAfterPurchase = $itemData['unit_price'] + ($transportCostShare / ($itemData['quantity'] ?? 1));
                 }
 
                 PurchaseInvoiceItem::create([
@@ -124,6 +140,8 @@ class PurchaseInvoiceController extends BaseController
                     'product_name' => $itemData['product_name'],
                     'product_code' => $itemData['product_code'] ?? null,
                     'quantity' => $itemData['quantity'],
+                    'unit_type' => $unitType,
+                    'carton_count' => $cartonCount,
                     'unit_price' => $itemData['unit_price'],
                     'discount_percentage' => $itemData['discount_percentage'] ?? 0,
                     'tax_percentage' => $itemData['tax_percentage'] ?? 0,
@@ -200,8 +218,13 @@ class PurchaseInvoiceController extends BaseController
                 // Delete old items
                 $purchase_invoice->items()->delete();
 
-                // Calculate transport cost distribution
-                $totalCartons = array_sum(array_column($validated['items'], 'quantity'));
+                // Calculate transport cost distribution (based on carton_count if carton, quantity if piece)
+                $totalCartons = 0;
+                foreach ($validated['items'] as $itemData) {
+                    if (($itemData['unit_type'] ?? 'carton') === 'carton') {
+                        $totalCartons += $itemData['carton_count'] ?? $itemData['quantity'];
+                    }
+                }
                 $totalTransportCost = ($validated['driver_cost'] ?? $purchase_invoice->driver_cost ?? 0) + 
                                     ($validated['worker_cost'] ?? $purchase_invoice->worker_cost ?? 0);
                 $costPerCarton = $totalCartons > 0 ? $totalTransportCost / $totalCartons : 0;
@@ -220,14 +243,25 @@ class PurchaseInvoiceController extends BaseController
                         $itemTotal += $tax;
                     }
 
-                    // Calculate transport cost share for this item
-                    $transportCostShare = $itemData['quantity'] * $costPerCarton;
-                    $costAfterPurchase = $itemData['unit_price'] + $costPerCarton;
-
                     // Get product info if product_id is provided
                     $product = null;
                     if (isset($itemData['product_id'])) {
                         $product = Product::find($itemData['product_id']);
+                    }
+
+                    // Calculate carton_count if not provided
+                    $unitType = $itemData['unit_type'] ?? 'carton';
+                    $cartonCount = null;
+                    if ($unitType === 'carton') {
+                        $cartonCount = $itemData['carton_count'] ?? $itemData['quantity'];
+                    }
+
+                    // Calculate transport cost share for this item (only for cartons)
+                    $transportCostShare = 0;
+                    $costAfterPurchase = $itemData['unit_price'];
+                    if ($unitType === 'carton' && $cartonCount > 0) {
+                        $transportCostShare = $cartonCount * $costPerCarton;
+                        $costAfterPurchase = $itemData['unit_price'] + ($transportCostShare / ($itemData['quantity'] ?? 1));
                     }
 
                     PurchaseInvoiceItem::create([
@@ -236,6 +270,8 @@ class PurchaseInvoiceController extends BaseController
                         'product_name' => $itemData['product_name'],
                         'product_code' => $itemData['product_code'] ?? null,
                         'quantity' => $itemData['quantity'],
+                        'unit_type' => $unitType,
+                        'carton_count' => $cartonCount,
                         'unit_price' => $itemData['unit_price'],
                         'discount_percentage' => $itemData['discount_percentage'] ?? 0,
                         'tax_percentage' => $itemData['tax_percentage'] ?? 0,
@@ -357,9 +393,14 @@ class PurchaseInvoiceController extends BaseController
                         ->first();
                 }
 
-                // Recalculate cost_after_purchase and transport_cost_share
-                $transportCostShare = $item->quantity * $costPerCarton;
-                $costAfterPurchase = $item->unit_price + $costPerCarton;
+                // Recalculate cost_after_purchase and transport_cost_share (only for cartons)
+                $transportCostShare = 0;
+                $costAfterPurchase = $item->unit_price;
+                if ($item->unit_type === 'carton' && ($item->carton_count ?? $item->quantity) > 0) {
+                    $cartonCount = $item->carton_count ?? $item->quantity;
+                    $transportCostShare = $cartonCount * $costPerCarton;
+                    $costAfterPurchase = $item->unit_price + ($transportCostShare / $item->quantity);
+                }
 
                 // Update item with calculated costs
                 $item->cost_after_purchase = $costAfterPurchase;
@@ -372,9 +413,10 @@ class PurchaseInvoiceController extends BaseController
                     $item->category_name = $product->category ? $product->category->category_name : null;
                     $item->product_id = $product->product_id;
 
-                    // Update product stock
+                    // Update product stock (convert to pieces)
+                    $quantityInPieces = $item->getQuantityInPieces();
                     $stockBefore = $product->current_stock;
-                    $product->updateStock($item->quantity, 'purchase');
+                    $product->updateStock($quantityInPieces, 'purchase');
                     $stockAfter = $product->current_stock;
 
                     // Update product purchase price and date
@@ -388,7 +430,7 @@ class PurchaseInvoiceController extends BaseController
                         'movement_type' => 'purchase',
                         'reference_type' => 'purchase_invoice',
                         'reference_id' => $purchase_invoice->invoice_id,
-                        'quantity' => $item->quantity,
+                        'quantity' => $quantityInPieces,
                         'stock_before' => $stockBefore,
                         'stock_after' => $stockAfter,
                         'unit_price' => $item->unit_price,

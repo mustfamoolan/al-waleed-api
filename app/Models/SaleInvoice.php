@@ -14,6 +14,8 @@ class SaleInvoice extends Model
 
     protected $fillable = [
         'representative_id',
+        'request_type',
+        'request_status',
         'buyer_type',
         'buyer_id',
         'buyer_name',
@@ -31,6 +33,16 @@ class SaleInvoice extends Model
         'remaining_amount',
         'payment_method',
         'status',
+        'delivery_status',
+        'prepared_by',
+        'prepared_at',
+        'assigned_to_driver',
+        'assigned_at',
+        'delivered_by',
+        'delivered_at',
+        'approved_by',
+        'approved_at',
+        'rejection_reason',
         'notes',
         'created_by',
     ];
@@ -38,6 +50,10 @@ class SaleInvoice extends Model
     protected $casts = [
         'invoice_date' => 'date',
         'due_date' => 'date',
+        'prepared_at' => 'datetime',
+        'assigned_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'approved_at' => 'datetime',
         'subtotal' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
@@ -84,6 +100,36 @@ class SaleInvoice extends Model
     public function creator()
     {
         return $this->belongsTo(Manager::class, 'created_by');
+    }
+
+    public function preparer()
+    {
+        return $this->belongsTo(Employee::class, 'prepared_by');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Picker::class, 'assigned_to_driver');
+    }
+
+    public function deliverer()
+    {
+        return $this->belongsTo(Picker::class, 'delivered_by');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(Manager::class, 'approved_by');
+    }
+
+    public function returns()
+    {
+        return $this->hasMany(SaleReturn::class, 'sale_invoice_id');
+    }
+
+    public function driverPayments()
+    {
+        return $this->hasMany(DriverPayment::class, 'sale_invoice_id');
     }
 
     // Methods
@@ -166,5 +212,104 @@ class SaleInvoice extends Model
     public function scopeFromOffice(Builder $query)
     {
         return $query->whereNull('representative_id');
+    }
+
+    // Delivery status methods
+    public function canChangeDeliveryStatus($newStatus): bool
+    {
+        return $this->isValidDeliveryStatusTransition($this->delivery_status ?? 'not_prepared', $newStatus);
+    }
+
+    public function changeDeliveryStatus($newStatus, $userId = null, $userType = null): bool
+    {
+        if (!$this->canChangeDeliveryStatus($newStatus)) {
+            return false;
+        }
+
+        $this->delivery_status = $newStatus;
+
+        // Set appropriate fields based on status
+        switch ($newStatus) {
+            case 'preparing':
+                if ($userType === 'employee' && $userId) {
+                    $this->prepared_by = $userId;
+                }
+                break;
+            case 'prepared':
+                if ($userType === 'employee' && $userId) {
+                    $this->prepared_by = $userId;
+                    $this->prepared_at = now();
+                }
+                break;
+            case 'assigned_to_driver':
+                // This should be set by assignToDriver method
+                break;
+            case 'delivered':
+                if ($userType === 'driver' && $userId) {
+                    $this->delivered_by = $userId;
+                    $this->delivered_at = now();
+                    // Update payment status if cash
+                    if ($this->payment_method === 'cash') {
+                        $this->status = 'paid';
+                        $this->paid_amount = $this->total_amount;
+                        $this->remaining_amount = 0;
+                    }
+                }
+                break;
+            case 'cancelled':
+                // Can be cancelled from any status before delivered
+                break;
+        }
+
+        $this->save();
+        return true;
+    }
+
+    public function assignToDriver($driverId): bool
+    {
+        if ($this->delivery_status !== 'prepared') {
+            return false;
+        }
+
+        $this->assigned_to_driver = $driverId;
+        $this->assigned_at = now();
+        $this->delivery_status = 'assigned_to_driver';
+        $this->save();
+
+        return true;
+    }
+
+    public function markAsDelivered($driverId): bool
+    {
+        if ($this->delivery_status !== 'in_delivery' || $this->assigned_to_driver != $driverId) {
+            return false;
+        }
+
+        return $this->changeDeliveryStatus('delivered', $driverId, 'driver');
+    }
+
+    public function isAssignedToMe($driverId): bool
+    {
+        return $this->assigned_to_driver == $driverId;
+    }
+
+    public function canBeReturned(): bool
+    {
+        return $this->delivery_status === 'delivered';
+    }
+
+    private function isValidDeliveryStatusTransition($current, $new): bool
+    {
+        $validTransitions = [
+            'not_prepared' => ['preparing', 'cancelled'],
+            'preparing' => ['prepared', 'cancelled'],
+            'prepared' => ['assigned_to_driver', 'cancelled'],
+            'assigned_to_driver' => ['in_delivery', 'cancelled'],
+            'in_delivery' => ['delivered', 'cancelled'],
+            'delivered' => [], // لا يمكن تغييرها بعد التسليم
+            'cancelled' => [], // لا يمكن تغييرها بعد الإلغاء
+        ];
+
+        return in_array($new, $validTransitions[$current] ?? []);
     }
 }

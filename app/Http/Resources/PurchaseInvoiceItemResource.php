@@ -23,6 +23,8 @@ class PurchaseInvoiceItemResource extends JsonResource
             'product_code' => $this->product_code,
             'category_name' => $this->category_name,
             'quantity' => $this->quantity,
+            'unit_type' => $this->unit_type,
+            'carton_count' => $this->carton_count,
             'unit_price' => $this->unit_price,
             'cost_after_purchase' => $this->cost_after_purchase,
             'transport_cost_share' => $this->transport_cost_share,

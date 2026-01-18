@@ -103,7 +103,13 @@ class PurchaseInvoice extends Model
      */
     public function getTotalCartons()
     {
-        return $this->items()->sum('quantity');
+        $total = 0;
+        foreach ($this->items as $item) {
+            if ($item->unit_type === 'carton') {
+                $total += $item->carton_count ?? $item->quantity;
+            }
+        }
+        return $total;
     }
 
     /**

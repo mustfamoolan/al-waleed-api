@@ -48,16 +48,24 @@ class PurchaseReturnController extends BaseController
             ]);
 
             foreach ($validated['items'] as $itemData) {
-                PurchaseReturnItem::create([
-                    'return_invoice_id' => $returnInvoice->return_invoice_id,
-                    'original_item_id' => $itemData['original_item_id'] ?? null,
-                    'product_name' => $itemData['product_name'],
-                    'product_code' => $itemData['product_code'] ?? null,
-                    'quantity' => $itemData['quantity'],
-                    'unit_price' => $itemData['unit_price'],
-                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
-                    'reason' => $itemData['reason'] ?? null,
-                ]);
+                    $unitType = $itemData['unit_type'] ?? 'carton';
+                    $cartonCount = null;
+                    if ($unitType === 'carton') {
+                        $cartonCount = $itemData['carton_count'] ?? $itemData['quantity'];
+                    }
+
+                    PurchaseReturnItem::create([
+                        'return_invoice_id' => $returnInvoice->return_invoice_id,
+                        'original_item_id' => $itemData['original_item_id'] ?? null,
+                        'product_name' => $itemData['product_name'],
+                        'product_code' => $itemData['product_code'] ?? null,
+                        'quantity' => $itemData['quantity'],
+                        'unit_type' => $unitType,
+                        'carton_count' => $cartonCount,
+                        'unit_price' => $itemData['unit_price'],
+                        'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+                        'reason' => $itemData['reason'] ?? null,
+                    ]);
             }
 
             DB::commit();
@@ -124,9 +132,10 @@ class PurchaseReturnController extends BaseController
                 }
 
                 if ($product) {
-                    // Update product stock (decrease)
+                    // Update product stock (decrease, convert to pieces)
+                    $quantityInPieces = $item->getQuantityInPieces();
                     $stockBefore = $product->current_stock;
-                    $product->updateStock(-$item->quantity, 'return');
+                    $product->updateStock(-$quantityInPieces, 'return');
                     $stockAfter = $product->current_stock;
 
                     // Create inventory movement
@@ -135,7 +144,7 @@ class PurchaseReturnController extends BaseController
                         'movement_type' => 'return',
                         'reference_type' => 'purchase_return',
                         'reference_id' => $purchase_return->return_invoice_id,
-                        'quantity' => -$item->quantity,
+                        'quantity' => -$quantityInPieces,
                         'stock_before' => $stockBefore,
                         'stock_after' => $stockAfter,
                         'unit_price' => $item->unit_price,

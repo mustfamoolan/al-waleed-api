@@ -34,4 +34,26 @@ class Picker extends Authenticatable
     {
         return $this->password_hash;
     }
+
+    // Relationships
+    public function assignedInvoices()
+    {
+        return $this->hasMany(SaleInvoice::class, 'assigned_to_driver');
+    }
+
+    public function deliveredInvoices()
+    {
+        return $this->hasMany(SaleInvoice::class, 'delivered_by');
+    }
+
+    public function returns()
+    {
+        return $this->hasMany(SaleReturn::class, 'returned_by')
+            ->where('created_by_type', 'driver');
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(DriverPayment::class, 'driver_id');
+    }
 }

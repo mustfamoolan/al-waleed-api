@@ -42,4 +42,9 @@ class Employee extends Authenticatable
         return $this->hasMany(SaleInvoice::class, 'buyer_id')
             ->where('buyer_type', 'employee');
     }
+
+    public function preparedInvoices()
+    {
+        return $this->hasMany(SaleInvoice::class, 'prepared_by');
+    }
 }
