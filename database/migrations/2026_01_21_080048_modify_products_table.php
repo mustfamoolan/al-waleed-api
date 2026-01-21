@@ -13,27 +13,50 @@ return new class extends Migration
     public function up(): void
     {
         // First, drop foreign key constraint if it exists
-        Schema::table('products', function (Blueprint $table) {
-            // Check if foreign key exists and drop it
-            $foreignKeys = DB::select("
+        // Get the actual foreign key constraint name
+        $foreignKeyName = null;
+        try {
+            $result = DB::select("
                 SELECT CONSTRAINT_NAME 
                 FROM information_schema.KEY_COLUMN_USAGE 
                 WHERE TABLE_SCHEMA = DATABASE() 
                 AND TABLE_NAME = 'products' 
                 AND COLUMN_NAME = 'supplier_id' 
                 AND REFERENCED_TABLE_NAME IS NOT NULL
+                LIMIT 1
             ");
             
-            if (!empty($foreignKeys)) {
-                foreach ($foreignKeys as $fk) {
+            if (!empty($result) && isset($result[0]->CONSTRAINT_NAME)) {
+                $foreignKeyName = $result[0]->CONSTRAINT_NAME;
+            }
+        } catch (\Exception $e) {
+            // If query fails, try alternative method
+        }
+
+        // Drop foreign key if it exists
+        if ($foreignKeyName) {
+            Schema::table('products', function (Blueprint $table) use ($foreignKeyName) {
+                try {
+                    $table->dropForeign([$foreignKeyName]);
+                } catch (\Exception $e) {
+                    // Foreign key might not exist, try dropping by column name
                     try {
-                        $table->dropForeign([$fk->CONSTRAINT_NAME]);
-                    } catch (\Exception $e) {
-                        // Foreign key might not exist, continue
+                        $table->dropForeign(['supplier_id']);
+                    } catch (\Exception $e2) {
+                        // Ignore if it doesn't exist
                     }
                 }
-            }
-        });
+            });
+        } else {
+            // Try dropping by column name directly
+            Schema::table('products', function (Blueprint $table) {
+                try {
+                    $table->dropForeign(['supplier_id']);
+                } catch (\Exception $e) {
+                    // Ignore if it doesn't exist
+                }
+            });
+        }
 
         Schema::table('products', function (Blueprint $table) {
             // Add new columns only if they don't exist
@@ -70,19 +93,31 @@ return new class extends Migration
 
             // Add index for barcode only if column exists and index doesn't
             if (Schema::hasColumn('products', 'barcode')) {
-                $indexes = DB::select("SHOW INDEX FROM products WHERE Column_name = 'barcode'");
-                if (empty($indexes)) {
-                    $table->index('barcode');
+                try {
+                    $indexes = DB::select("SHOW INDEX FROM products WHERE Column_name = 'barcode'");
+                    if (empty($indexes)) {
+                        $table->index('barcode');
+                    }
+                } catch (\Exception $e) {
+                    // Ignore index errors
                 }
             }
         });
 
         // Rename existing columns using raw SQL (only if they exist and haven't been renamed)
         if (Schema::hasColumn('products', 'product_name') && !Schema::hasColumn('products', 'name_ar')) {
-            DB::statement('ALTER TABLE products CHANGE COLUMN product_name name_ar VARCHAR(255)');
+            try {
+                DB::statement('ALTER TABLE products CHANGE COLUMN product_name name_ar VARCHAR(255)');
+            } catch (\Exception $e) {
+                // Ignore if already renamed
+            }
         }
         if (Schema::hasColumn('products', 'product_image') && !Schema::hasColumn('products', 'image_path')) {
-            DB::statement('ALTER TABLE products CHANGE COLUMN product_image image_path VARCHAR(255)');
+            try {
+                DB::statement('ALTER TABLE products CHANGE COLUMN product_image image_path VARCHAR(255)');
+            } catch (\Exception $e) {
+                // Ignore if already renamed
+            }
         }
     }
 
