@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         // Seed Manager
         $this->call([
             ManagerSeeder::class,
+            WarehouseSeeder::class,
         ]);
 
         // User::factory(10)->create();
