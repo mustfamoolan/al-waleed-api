@@ -13,6 +13,7 @@ class Category extends Model
 
     protected $fillable = [
         'category_name',
+        'parent_id',
         'description',
         'is_active',
     ];
@@ -27,6 +28,16 @@ class Category extends Model
         return $this->hasMany(Product::class, 'category_id');
     }
 
+    public function parent()
+    {
+        return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Category::class, 'parent_id');
+    }
+
     // Methods
     public function activeProducts()
     {
@@ -36,5 +47,21 @@ class Category extends Model
     public function productsCount()
     {
         return $this->products()->count();
+    }
+
+    /**
+     * Get all descendants (children, grandchildren, etc.)
+     */
+    public function descendants()
+    {
+        return $this->children()->with('descendants');
+    }
+
+    /**
+     * Check if category is a subcategory
+     */
+    public function isSubcategory()
+    {
+        return $this->parent_id !== null;
     }
 }

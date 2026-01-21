@@ -6,29 +6,36 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StorePurchaseReturnRequest extends FormRequest
 {
+    /**
+     * Determine if the user is authorized to make this request.
+     */
     public function authorize(): bool
     {
         return true;
     }
 
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
     public function rules(): array
     {
         return [
-            'original_invoice_id' => ['nullable', 'exists:purchase_invoices,invoice_id'],
+            'reference_invoice_id' => ['nullable', 'exists:purchase_invoices,invoice_id'],
             'supplier_id' => ['required', 'exists:suppliers,supplier_id'],
-            'return_invoice_number' => ['required', 'string', 'unique:purchase_return_invoices,return_invoice_number'],
+            'return_number' => ['required', 'string', 'unique:purchase_returns,return_number'],
             'return_date' => ['required', 'date'],
             'total_amount' => ['required', 'numeric', 'min:0'],
             'reason' => ['nullable', 'string'],
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.original_item_id' => ['nullable', 'exists:purchase_invoice_items,item_id'],
+            'items.*.product_id' => ['nullable', 'exists:products,product_id'],
+            'items.*.batch_id' => ['required', 'exists:inventory_batches,id'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.001'],
+            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.product_name' => ['required', 'string', 'max:255'],
             'items.*.product_code' => ['nullable', 'string', 'max:255'],
-            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
-            'items.*.unit_type' => ['required', 'in:piece,carton'],
-            'items.*.carton_count' => ['nullable', 'numeric', 'min:0', 'required_if:items.*.unit_type,carton'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.reason' => ['nullable', 'string'],
         ];
     }

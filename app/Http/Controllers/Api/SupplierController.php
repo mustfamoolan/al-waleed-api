@@ -29,9 +29,9 @@ class SupplierController extends BaseController
         if ($request->has('search')) {
             $search = $request->get('search');
             $query->where(function($q) use ($search) {
-                $q->where('company_name', 'like', "%{$search}%")
-                  ->orWhere('contact_person_name', 'like', "%{$search}%")
-                  ->orWhere('phone_number', 'like', "%{$search}%");
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('contact_person', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -47,11 +47,14 @@ class SupplierController extends BaseController
         $validated = $request->validated();
         
         $supplier = Supplier::create([
-            'company_name' => $validated['company_name'],
-            'contact_person_name' => $validated['contact_person_name'],
-            'phone_number' => $validated['phone_number'],
+            'name' => $validated['name'],
+            'contact_person' => $validated['contact_person'] ?? null,
+            'phone' => $validated['phone'],
             'email' => $validated['email'] ?? null,
+            'tax_number' => $validated['tax_number'] ?? null,
             'address' => $validated['address'] ?? null,
+            'opening_balance' => $validated['opening_balance'] ?? 0,
+            'current_balance' => $validated['opening_balance'] ?? 0,
             'notes' => $validated['notes'] ?? null,
             'is_active' => $validated['is_active'] ?? true,
         ]);
@@ -75,11 +78,13 @@ class SupplierController extends BaseController
         $validated = $request->validated();
         
         $updateData = [
-            'company_name' => $validated['company_name'] ?? $supplier->company_name,
-            'contact_person_name' => $validated['contact_person_name'] ?? $supplier->contact_person_name,
-            'phone_number' => $validated['phone_number'] ?? $supplier->phone_number,
+            'name' => $validated['name'] ?? $supplier->name,
+            'contact_person' => $validated['contact_person'] ?? $supplier->contact_person,
+            'phone' => $validated['phone'] ?? $supplier->phone,
             'email' => $validated['email'] ?? $supplier->email,
+            'tax_number' => $validated['tax_number'] ?? $supplier->tax_number,
             'address' => $validated['address'] ?? $supplier->address,
+            'opening_balance' => $validated['opening_balance'] ?? $supplier->opening_balance,
             'notes' => $validated['notes'] ?? $supplier->notes,
             'is_active' => $validated['is_active'] ?? $supplier->is_active,
         ];
@@ -98,53 +103,19 @@ class SupplierController extends BaseController
         return $this->successResponse(null, 'Supplier deleted successfully');
     }
 
-    /**
-     * Upload profile image for supplier.
-     */
-    public function uploadImage(Request $request, Supplier $supplier): JsonResponse
-    {
-        try {
-            $request->validate([
-                'profile_image' => ['required', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
-            ]);
-
-            // حذف الصورة القديمة إذا كانت موجودة
-            if ($supplier->profile_image && Storage::disk('public')->exists($supplier->profile_image)) {
-                Storage::disk('public')->delete($supplier->profile_image);
-            }
-
-            // رفع الصورة الجديدة
-            $path = $request->file('profile_image')->store('suppliers', 'public');
-            
-            // تحديث المسار في قاعدة البيانات
-            $supplier->update([
-                'profile_image' => $path
-            ]);
-
-            return $this->successResponse([
-                'profile_image' => $path,
-                'profile_image_url' => asset('storage/' . $path)
-            ], 'Image uploaded successfully');
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return $this->validationErrorResponse($e->errors());
-        } catch (\Exception $e) {
-            Log::error('Supplier image upload error: ' . $e->getMessage());
-            return $this->errorResponse('Failed to upload image', 500);
-        }
-    }
 
     /**
      * Get supplier balance.
      */
     public function balance(Supplier $supplier): JsonResponse
     {
-        $balance = $supplier->currentBalance();
+        $supplier->updateBalance();
         
         return $this->successResponse([
             'supplier_id' => $supplier->supplier_id,
-            'company_name' => $supplier->company_name,
-            'current_balance' => $balance,
+            'name' => $supplier->name,
+            'opening_balance' => $supplier->opening_balance,
+            'current_balance' => $supplier->current_balance,
             'total_purchases' => $supplier->totalPurchases(),
             'total_payments' => $supplier->totalPayments(),
             'total_returns' => $supplier->totalReturns(),
@@ -156,18 +127,51 @@ class SupplierController extends BaseController
      */
     public function summary(Supplier $supplier): JsonResponse
     {
+        $supplier->updateBalance();
+        
         $summary = [
             'supplier' => new SupplierResource($supplier),
-            'balance' => $supplier->currentBalance(),
+            'opening_balance' => $supplier->opening_balance,
+            'current_balance' => $supplier->current_balance,
             'total_invoices' => $supplier->purchaseInvoices()->count(),
             'total_purchases' => $supplier->totalPurchases(),
             'total_payments' => $supplier->totalPayments(),
             'total_returns' => $supplier->totalReturns(),
             'pending_invoices' => $supplier->purchaseInvoices()
-                ->whereIn('status', ['pending', 'partial'])
+                ->whereIn('payment_status', ['unpaid', 'partial'])
                 ->count(),
+            'transactions' => $supplier->transactions()
+                ->orderBy('transaction_date', 'desc')
+                ->limit(10)
+                ->get(),
         ];
 
         return $this->successResponse($summary);
+    }
+
+    /**
+     * Get supplier transactions.
+     */
+    public function transactions(Request $request, Supplier $supplier): JsonResponse
+    {
+        $query = $supplier->transactions();
+
+        // Filter by transaction type
+        if ($request->has('transaction_type')) {
+            $query->where('transaction_type', $request->get('transaction_type'));
+        }
+
+        // Filter by date range
+        if ($request->has('from_date')) {
+            $query->where('transaction_date', '>=', $request->get('from_date'));
+        }
+        if ($request->has('to_date')) {
+            $query->where('transaction_date', '<=', $request->get('to_date'));
+        }
+
+        $transactions = $query->orderBy('transaction_date', 'desc')
+            ->paginate($request->get('per_page', 15));
+
+        return $this->successResponse($transactions);
     }
 }

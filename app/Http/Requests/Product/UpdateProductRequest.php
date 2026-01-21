@@ -26,19 +26,14 @@ class UpdateProductRequest extends FormRequest
         $productId = $product instanceof \App\Models\Product ? $product->product_id : $product;
 
         return [
-            'product_name' => ['sometimes', 'required', 'string', 'max:255'],
-            'sku' => ['nullable', 'string', 'max:255', Rule::unique('products', 'sku')->ignore($productId, 'product_id')],
+            'name_ar' => ['sometimes', 'required', 'string', 'max:255'],
+            'name_en' => ['nullable', 'string', 'max:255'],
+            'sku' => ['sometimes', 'required', 'string', 'max:255', Rule::unique('products', 'sku')->ignore($productId, 'product_id')],
+            'barcode' => ['nullable', 'string', 'max:255'],
             'category_id' => ['nullable', 'exists:categories,category_id'],
-            'supplier_id' => ['nullable', 'exists:suppliers,supplier_id'],
-            'unit_type' => ['sometimes', 'required', 'in:piece,carton'],
-            'pieces_per_carton' => ['nullable', 'integer', 'min:1', 'required_if:unit_type,carton'],
-            'piece_weight' => ['nullable', 'numeric', 'min:0'],
-            'weight_unit' => ['nullable', 'in:kg,gram,liter,ml,piece'],
-            'current_stock' => ['nullable', 'numeric', 'min:0'],
-            'purchase_price' => ['sometimes', 'required', 'numeric', 'min:0'],
-            'wholesale_price' => ['nullable', 'numeric', 'min:0'],
-            'retail_price' => ['nullable', 'numeric', 'min:0'],
-            'last_purchase_date' => ['nullable', 'date'],
+            'description' => ['nullable', 'string'],
+            'image_path' => ['nullable', 'string', 'max:255'],
+            'min_stock_alert' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
         ];

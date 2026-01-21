@@ -25,11 +25,13 @@ class UpdateSupplierRequest extends FormRequest
         $supplierId = $supplier instanceof \App\Models\Supplier ? $supplier->supplier_id : $supplier;
         
         return [
-            'company_name' => ['sometimes', 'required', 'string', 'max:255'],
-            'contact_person_name' => ['sometimes', 'required', 'string', 'max:255'],
-            'phone_number' => ['sometimes', 'required', 'string', 'unique:suppliers,phone_number,' . $supplierId . ',supplier_id'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'contact_person' => ['nullable', 'string', 'max:255'],
+            'phone' => ['sometimes', 'required', 'string', 'unique:suppliers,phone,' . $supplierId . ',supplier_id'],
             'email' => ['nullable', 'email', 'max:255'],
-            'address' => ['nullable', 'string'],
+            'tax_number' => ['nullable', 'string', 'max:255'],
+            'address' => ['sometimes', 'required', 'string'],
+            'opening_balance' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'is_active' => ['sometimes', 'boolean'],
         ];

@@ -23,19 +23,14 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'product_name' => ['required', 'string', 'max:255'],
-            'sku' => ['nullable', 'string', 'max:255', 'unique:products,sku'],
+            'name_ar' => ['required', 'string', 'max:255'],
+            'name_en' => ['nullable', 'string', 'max:255'],
+            'sku' => ['required', 'string', 'max:255', 'unique:products,sku'],
+            'barcode' => ['nullable', 'string', 'max:255'],
             'category_id' => ['nullable', 'exists:categories,category_id'],
-            'supplier_id' => ['nullable', 'exists:suppliers,supplier_id'],
-            'unit_type' => ['required', 'in:piece,carton'],
-            'pieces_per_carton' => ['nullable', 'integer', 'min:1', 'required_if:unit_type,carton'],
-            'piece_weight' => ['nullable', 'numeric', 'min:0'],
-            'weight_unit' => ['nullable', 'in:kg,gram,liter,ml,piece'],
-            'current_stock' => ['nullable', 'numeric', 'min:0'],
-            'purchase_price' => ['required', 'numeric', 'min:0'],
-            'wholesale_price' => ['nullable', 'numeric', 'min:0'],
-            'retail_price' => ['nullable', 'numeric', 'min:0'],
-            'last_purchase_date' => ['nullable', 'date'],
+            'description' => ['nullable', 'string'],
+            'image_path' => ['nullable', 'string', 'max:255'],
+            'min_stock_alert' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['sometimes', 'boolean'],
             'notes' => ['nullable', 'string'],
         ];

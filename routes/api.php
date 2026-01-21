@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\InventoryMovementController;
 use App\Http\Controllers\Api\JournalEntryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductUnitController;
+use App\Http\Controllers\Api\StockAdjustmentController;
 use App\Http\Controllers\Api\ProductSaleController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\CustomerController;
@@ -144,15 +146,14 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
 
     // Suppliers Management
     Route::apiResource('suppliers', SupplierController::class);
-    Route::post('suppliers/{supplier}/upload-image', [SupplierController::class, 'uploadImage']);
     Route::get('suppliers/{supplier}/balance', [SupplierController::class, 'balance']);
     Route::get('suppliers/{supplier}/summary', [SupplierController::class, 'summary']);
+    Route::get('suppliers/{supplier}/transactions', [SupplierController::class, 'transactions']);
     Route::get('suppliers/{supplier}/invoices', [PurchaseInvoiceController::class, 'index']);
 
     // Purchase Invoices
     Route::apiResource('purchase-invoices', PurchaseInvoiceController::class);
-    Route::post('purchase-invoices/{purchase_invoice}/duplicate', [PurchaseInvoiceController::class, 'duplicate']);
-    Route::post('purchase-invoices/{purchase_invoice}/post', [PurchaseInvoiceController::class, 'post']);
+    Route::post('purchase-invoices/{purchase_invoice}/approve', [PurchaseInvoiceController::class, 'approve']);
     Route::get('purchase-invoices/{purchase_invoice}/payments', [SupplierPaymentController::class, 'index']);
 
     // Supplier Payments
@@ -161,7 +162,6 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
 
     // Purchase Returns
     Route::apiResource('purchase-returns', PurchaseReturnController::class);
-    Route::post('purchase-returns/{purchase_return}/post', [PurchaseReturnController::class, 'post']);
 
     // Accounts (Chart of Accounts)
     Route::apiResource('accounts', AccountController::class);
@@ -188,14 +188,23 @@ Route::middleware(['auth:sanctum', 'manager.only'])->group(function () {
     Route::apiResource('products', ProductController::class);
     Route::post('products/{product}/upload-image', [ProductController::class, 'uploadImage']);
     Route::get('products/{product}/stock', [ProductController::class, 'stock']);
-    Route::get('products/{product}/movements', [ProductController::class, 'movements']);
+    Route::get('products/{product}/batches', [ProductController::class, 'batches']);
     Route::get('products/{product}/sales', [ProductController::class, 'sales']);
     Route::get('products/{product}/profit', [ProductController::class, 'profit']);
-    Route::post('products/{product}/adjust-stock', [ProductController::class, 'adjustStock']);
     Route::get('products/low-stock', [ProductController::class, 'lowStock']);
     Route::get('products/stock-report', [ProductController::class, 'stockReport']);
     Route::get('products/profit-report', [ProductController::class, 'profitReport']);
     Route::get('products/sales-report', [ProductController::class, 'salesReport']);
+
+    // Product Units Management
+    Route::get('products/{product}/units', [ProductUnitController::class, 'index']);
+    Route::post('products/{product}/units', [ProductUnitController::class, 'store']);
+    Route::get('product-units/{product_unit}', [ProductUnitController::class, 'show']);
+    Route::put('product-units/{product_unit}', [ProductUnitController::class, 'update']);
+    Route::delete('product-units/{product_unit}', [ProductUnitController::class, 'destroy']);
+
+    // Stock Adjustments
+    Route::apiResource('stock-adjustments', StockAdjustmentController::class);
 
     // Inventory Movements
     Route::get('inventory-movements', [InventoryMovementController::class, 'index']);

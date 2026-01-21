@@ -12,17 +12,21 @@ class Supplier extends Model
     protected $primaryKey = 'supplier_id';
 
     protected $fillable = [
-        'company_name',
-        'contact_person_name',
-        'phone_number',
+        'name',
+        'contact_person',
+        'phone',
         'email',
+        'tax_number',
         'address',
-        'profile_image',
+        'opening_balance',
+        'current_balance',
         'notes',
         'is_active',
     ];
 
     protected $casts = [
+        'opening_balance' => 'decimal:2',
+        'current_balance' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
@@ -32,56 +36,66 @@ class Supplier extends Model
         return $this->hasMany(PurchaseInvoice::class, 'supplier_id');
     }
 
-    public function purchaseReturnInvoices()
+    public function purchaseReturns()
     {
-        return $this->hasMany(PurchaseReturnInvoice::class, 'supplier_id');
+        return $this->hasMany(PurchaseReturn::class, 'supplier_id');
     }
 
-    public function payments()
+    public function transactions()
     {
-        return $this->hasMany(SupplierPayment::class, 'supplier_id');
+        return $this->hasMany(SupplierTransaction::class, 'supplier_id');
     }
 
     // Methods
-    public function currentBalance()
+    /**
+     * Calculate current balance from transactions
+     */
+    public function calculateCurrentBalance()
     {
-        $totalInvoices = $this->purchaseInvoices()
-            ->where('status', '!=', 'cancelled')
-            ->sum('total_amount');
+        $openingBalance = $this->opening_balance ?? 0;
         
-        $totalReturns = $this->purchaseReturnInvoices()
-            ->where('status', '!=', 'cancelled')
-            ->sum('total_amount');
+        $totalCredit = $this->transactions()->sum('credit');
+        $totalDebit = $this->transactions()->sum('debit');
         
-        $totalPayments = $this->payments()
-            ->where('payment_type', 'payment')
-            ->sum('amount');
-        
-        $totalRefunds = $this->payments()
-            ->where('payment_type', 'refund')
-            ->sum('amount');
-
-        return ($totalInvoices - $totalReturns) - ($totalPayments - $totalRefunds);
+        return $openingBalance + $totalCredit - $totalDebit;
     }
 
+    /**
+     * Update current balance
+     */
+    public function updateBalance()
+    {
+        $this->current_balance = $this->calculateCurrentBalance();
+        $this->save();
+    }
+
+    /**
+     * Get total purchases (sum of all purchase invoices)
+     */
     public function totalPurchases()
     {
         return $this->purchaseInvoices()
-            ->where('status', '!=', 'cancelled')
+            ->where('payment_status', '!=', 'cancelled')
             ->sum('total_amount');
     }
 
-    public function totalPayments()
-    {
-        return $this->payments()
-            ->where('payment_type', 'payment')
-            ->sum('amount');
-    }
-
+    /**
+     * Get total returns
+     */
     public function totalReturns()
     {
-        return $this->purchaseReturnInvoices()
+        return $this->purchaseReturns()
             ->where('status', '!=', 'cancelled')
             ->sum('total_amount');
+    }
+
+    /**
+     * Get total payments
+     */
+    public function totalPayments()
+    {
+        return $this->transactions()
+            ->where('transaction_type', 'payment_out')
+            ->sum('debit');
     }
 }

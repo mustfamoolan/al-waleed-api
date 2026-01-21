@@ -13,18 +13,16 @@ class PurchaseInvoice extends Model
 
     protected $fillable = [
         'supplier_id',
+        'warehouse_id',
         'invoice_number',
         'invoice_date',
         'due_date',
+        'payment_status',
+        'payment_method',
         'subtotal',
         'tax_amount',
         'discount_amount',
         'total_amount',
-        'paid_amount',
-        'remaining_amount',
-        'driver_cost',
-        'worker_cost',
-        'status',
         'notes',
         'created_by',
     ];
@@ -36,10 +34,6 @@ class PurchaseInvoice extends Model
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
-        'paid_amount' => 'decimal:2',
-        'remaining_amount' => 'decimal:2',
-        'driver_cost' => 'decimal:2',
-        'worker_cost' => 'decimal:2',
     ];
 
     // Relationships
@@ -48,79 +42,81 @@ class PurchaseInvoice extends Model
         return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    public function details()
+    {
+        return $this->hasMany(PurchaseInvoiceDetail::class, 'invoice_id');
+    }
+
     public function items()
     {
-        return $this->hasMany(PurchaseInvoiceItem::class, 'invoice_id');
+        return $this->details(); // Alias for backward compatibility
     }
 
-    public function returnInvoices()
+    // Alias for old code compatibility
+    public function getItemsAttribute()
     {
-        return $this->hasMany(PurchaseReturnInvoice::class, 'original_invoice_id');
+        return $this->details;
     }
 
-    public function payments()
+    public function purchaseReturns()
     {
-        return $this->hasMany(SupplierPayment::class, 'invoice_id');
+        return $this->hasMany(PurchaseReturn::class, 'reference_invoice_id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(SupplierTransaction::class, 'reference_id')
+            ->where('transaction_type', 'purchase_invoice');
     }
 
     public function creator()
     {
-        return $this->belongsTo(Manager::class, 'created_by');
+        return $this->belongsTo(\App\Models\Manager::class, 'created_by');
     }
 
     // Methods
-    public function calculateRemaining()
+    /**
+     * Update payment status based on transactions
+     */
+    public function updatePaymentStatus()
     {
-        $this->remaining_amount = $this->total_amount - $this->paid_amount;
-        $this->save();
-        return $this->remaining_amount;
-    }
+        $totalPaid = $this->transactions()
+            ->where('transaction_type', 'payment_out')
+            ->sum('debit');
 
-    public function updateStatus()
-    {
-        if ($this->remaining_amount <= 0 && $this->paid_amount > 0) {
-            $this->status = 'paid';
-        } elseif ($this->paid_amount > 0 && $this->paid_amount < $this->total_amount) {
-            $this->status = 'partial';
-        } elseif ($this->status == 'draft') {
-            // Keep draft status
+        if ($totalPaid >= $this->total_amount) {
+            $this->payment_status = 'paid';
+        } elseif ($totalPaid > 0) {
+            $this->payment_status = 'partial';
         } else {
-            $this->status = 'pending';
+            $this->payment_status = 'unpaid';
         }
+
         $this->save();
     }
 
     /**
-     * Get total transport cost (driver + worker)
+     * Check if invoice is paid
      */
-    public function getTotalTransportCost()
+    public function isPaid()
     {
-        return ($this->driver_cost ?? 0) + ($this->worker_cost ?? 0);
+        return $this->payment_status === 'paid';
     }
 
     /**
-     * Get total number of cartons in all items
+     * Get remaining amount
      */
-    public function getTotalCartons()
+    public function getRemainingAmount()
     {
-        $total = 0;
-        foreach ($this->items as $item) {
-            if ($item->unit_type === 'carton') {
-                $total += $item->carton_count ?? $item->quantity;
-            }
-        }
-        return $total;
-    }
+        $totalPaid = $this->transactions()
+            ->where('transaction_type', 'payment_out')
+            ->sum('debit');
 
-    /**
-     * Calculate cost per carton for transport cost distribution
-     */
-    public function getCostPerCarton()
-    {
-        $totalCartons = $this->getTotalCartons();
-        if ($totalCartons <= 0) {
-            return 0;
-        }
-        return $this->getTotalTransportCost() / $totalCartons;
+        return max(0, $this->total_amount - $totalPaid);
     }
 }

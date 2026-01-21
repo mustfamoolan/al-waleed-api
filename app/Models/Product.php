@@ -12,35 +12,19 @@ class Product extends Model
     protected $primaryKey = 'product_id';
 
     protected $fillable = [
-        'product_name',
+        'name_ar',
+        'name_en',
         'sku',
-        'product_image',
+        'barcode',
         'category_id',
-        'supplier_id',
-        'unit_type',
-        'pieces_per_carton',
-        'piece_weight',
-        'weight_unit',
-        'carton_weight',
-        'current_stock',
-        'purchase_price',
-        'wholesale_price',
-        'retail_price',
-        'last_purchase_date',
-        'last_sale_date',
+        'description',
+        'image_path',
+        'min_stock_alert',
         'is_active',
         'notes',
     ];
 
     protected $casts = [
-        'piece_weight' => 'decimal:3',
-        'carton_weight' => 'decimal:3',
-        'current_stock' => 'decimal:2',
-        'purchase_price' => 'decimal:2',
-        'wholesale_price' => 'decimal:2',
-        'retail_price' => 'decimal:2',
-        'last_purchase_date' => 'date',
-        'last_sale_date' => 'date',
         'is_active' => 'boolean',
     ];
 
@@ -50,91 +34,99 @@ class Product extends Model
         return $this->belongsTo(Category::class, 'category_id');
     }
 
-    public function supplier()
+    public function productUnits()
     {
-        return $this->belongsTo(Supplier::class, 'supplier_id');
+        return $this->hasMany(ProductUnit::class, 'product_id');
     }
 
-    public function inventoryMovements()
+    public function inventoryBatches()
     {
-        return $this->hasMany(InventoryMovement::class, 'product_id');
+        return $this->hasMany(InventoryBatch::class, 'product_id');
     }
 
-    public function sales()
+    public function purchaseInvoiceDetails()
     {
-        return $this->hasMany(ProductSale::class, 'product_id');
+        return $this->hasMany(PurchaseInvoiceDetail::class, 'product_id');
     }
 
-    public function purchaseInvoiceItems()
+    public function purchaseReturnDetails()
     {
-        return $this->hasMany(PurchaseInvoiceItem::class, 'product_id');
-    }
-
-    public function purchaseReturnItems()
-    {
-        return $this->hasMany(PurchaseReturnItem::class, 'product_id');
+        return $this->hasMany(PurchaseReturnDetail::class, 'product_id');
     }
 
     // Methods
-    public function calculateCartonWeight()
+    /**
+     * Get base unit for this product
+     */
+    public function getBaseUnit()
     {
-        if ($this->unit_type === 'carton' && $this->pieces_per_carton && $this->piece_weight) {
-            return $this->pieces_per_carton * $this->piece_weight;
+        return $this->productUnits()->where('is_base_unit', true)->first();
+    }
+
+    /**
+     * Get current stock quantity (sum of all active batches)
+     */
+    public function getCurrentStock($warehouseId = null)
+    {
+        $query = $this->inventoryBatches()
+            ->where('status', 'active')
+            ->where('quantity_current', '>', 0);
+
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
-        return null;
+
+        return $query->sum('quantity_current');
     }
 
-    public function updateStock($quantity, $movementType = 'adjustment')
+    /**
+     * Check if product is low stock
+     */
+    public function isLowStock($warehouseId = null)
     {
-        $stockBefore = $this->current_stock;
-        $this->current_stock += $quantity;
+        $currentStock = $this->getCurrentStock($warehouseId);
+        return $currentStock <= $this->min_stock_alert;
+    }
 
-        if ($this->current_stock < 0) {
-            $this->current_stock = (float) 0;
+    /**
+     * Get batches sorted by expiry date (FEFO - First Expired First Out)
+     */
+    public function getBatchesByFEFO($warehouseId = null, $quantity = null)
+    {
+        $query = $this->inventoryBatches()
+            ->where('status', 'active')
+            ->where('quantity_current', '>', 0)
+            ->orderBy('expiry_date', 'asc');
+
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
 
-        $this->save();
-
-        return [
-            'stock_before' => $stockBefore,
-            'stock_after' => $this->current_stock,
-        ];
-    }
-
-    public function isLowStock($threshold = 10)
-    {
-        return $this->current_stock <= $threshold;
-    }
-
-    public function getTotalProfit()
-    {
-        return $this->sales()->sum('profit_amount');
-    }
-
-    public function getAverageProfit()
-    {
-        $salesCount = $this->sales()->count();
-        if ($salesCount === 0) {
-            return 0;
+        if ($quantity) {
+            $query->where('quantity_current', '>=', $quantity);
         }
-        return $this->getTotalProfit() / $salesCount;
+
+        return $query->get();
     }
 
-    public function updateLastSaleDate($date = null)
+    /**
+     * Get batches sorted by creation date (FIFO - First In First Out)
+     */
+    public function getBatchesByFIFO($warehouseId = null, $quantity = null)
     {
-        $this->last_sale_date = $date ?? now();
-        $this->save();
-    }
+        $query = $this->inventoryBatches()
+            ->where('status', 'active')
+            ->where('quantity_current', '>', 0)
+            ->orderBy('created_at', 'asc');
 
-    // Auto-calculate carton weight on save
-    protected static function boot()
-    {
-        parent::boot();
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
+        }
 
-        static::saving(function ($product) {
-            if ($product->unit_type === 'carton' && $product->pieces_per_carton && $product->piece_weight) {
-                $product->carton_weight = $product->pieces_per_carton * $product->piece_weight;
-            }
-        });
+        if ($quantity) {
+            $query->where('quantity_current', '>=', $quantity);
+        }
+
+        return $query->get();
     }
 }

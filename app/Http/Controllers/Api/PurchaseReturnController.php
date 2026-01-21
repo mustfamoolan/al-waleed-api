@@ -4,10 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\PurchaseReturn\StorePurchaseReturnRequest;
 use App\Http\Resources\PurchaseReturnResource;
-use App\Models\InventoryMovement;
-use App\Models\Product;
-use App\Models\PurchaseReturnInvoice;
-use App\Models\PurchaseReturnItem;
+use App\Models\PurchaseReturn;
+use App\Models\PurchaseReturnDetail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,18 +13,51 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseReturnController extends BaseController
 {
+    /**
+     * Display a listing of purchase returns.
+     */
     public function index(Request $request): JsonResponse
     {
-        $query = PurchaseReturnInvoice::with(['supplier', 'originalInvoice', 'items']);
+        $query = PurchaseReturn::with(['supplier', 'referenceInvoice', 'details']);
 
+        // Filter by supplier
         if ($request->has('supplier_id')) {
             $query->where('supplier_id', $request->get('supplier_id'));
         }
 
-        $returns = $query->orderBy('return_date', 'desc')->get();
+        // Filter by status
+        if ($request->has('status')) {
+            $query->where('status', $request->get('status'));
+        }
+
+        // Filter by date range
+        if ($request->has('from_date')) {
+            $query->where('return_date', '>=', $request->get('from_date'));
+        }
+        if ($request->has('to_date')) {
+            $query->where('return_date', '<=', $request->get('to_date'));
+        }
+
+        // Search
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where(function($q) use ($search) {
+                $q->where('return_number', 'like', "%{$search}%")
+                  ->orWhereHas('supplier', function($q) use ($search) {
+                      $q->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        $returns = $query->orderBy('return_date', 'desc')
+            ->paginate($request->get('per_page', 15));
+
         return $this->successResponse(PurchaseReturnResource::collection($returns));
     }
 
+    /**
+     * Store a newly created purchase return.
+     */
     public function store(StorePurchaseReturnRequest $request): JsonResponse
     {
         try {
@@ -35,10 +66,11 @@ class PurchaseReturnController extends BaseController
             $validated = $request->validated();
             $manager = $request->user();
 
-            $returnInvoice = PurchaseReturnInvoice::create([
-                'original_invoice_id' => $validated['original_invoice_id'] ?? null,
+            // Create return
+            $purchaseReturn = PurchaseReturn::create([
+                'reference_invoice_id' => $validated['reference_invoice_id'] ?? null,
                 'supplier_id' => $validated['supplier_id'],
-                'return_invoice_number' => $validated['return_invoice_number'],
+                'return_number' => $validated['return_number'],
                 'return_date' => $validated['return_date'],
                 'total_amount' => $validated['total_amount'],
                 'reason' => $validated['reason'] ?? null,
@@ -47,31 +79,27 @@ class PurchaseReturnController extends BaseController
                 'created_by' => $manager->manager_id,
             ]);
 
+            // Create details
             foreach ($validated['items'] as $itemData) {
-                    $unitType = $itemData['unit_type'] ?? 'carton';
-                    $cartonCount = null;
-                    if ($unitType === 'carton') {
-                        $cartonCount = $itemData['carton_count'] ?? $itemData['quantity'];
-                    }
-
-                    PurchaseReturnItem::create([
-                        'return_invoice_id' => $returnInvoice->return_invoice_id,
-                        'original_item_id' => $itemData['original_item_id'] ?? null,
-                        'product_name' => $itemData['product_name'],
-                        'product_code' => $itemData['product_code'] ?? null,
-                        'quantity' => $itemData['quantity'],
-                        'unit_type' => $unitType,
-                        'carton_count' => $cartonCount,
-                        'unit_price' => $itemData['unit_price'],
-                        'total_price' => $itemData['quantity'] * $itemData['unit_price'],
-                        'reason' => $itemData['reason'] ?? null,
-                    ]);
+                PurchaseReturnDetail::create([
+                    'purchase_return_id' => $purchaseReturn->id,
+                    'original_item_id' => null, // Can be linked if needed
+                    'product_id' => $itemData['product_id'] ?? null,
+                    'batch_id' => $itemData['batch_id'],
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'total_price' => $itemData['quantity'] * $itemData['unit_price'],
+                    'product_name' => $itemData['product_name'],
+                    'product_code' => $itemData['product_code'] ?? null,
+                    'reason' => $itemData['reason'] ?? null,
+                ]);
             }
 
+            // Observer will handle inventory and supplier balance updates
             DB::commit();
 
             return $this->successResponse(
-                new PurchaseReturnResource($returnInvoice->load(['supplier', 'originalInvoice', 'items'])),
+                new PurchaseReturnResource($purchaseReturn->load(['supplier', 'referenceInvoice', 'details'])),
                 'Purchase return created successfully',
                 201
             );
@@ -79,102 +107,31 @@ class PurchaseReturnController extends BaseController
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Purchase return creation error: ' . $e->getMessage());
-            return $this->errorResponse('Failed to create purchase return', 500);
+            return $this->errorResponse('Failed to create purchase return: ' . $e->getMessage(), 500);
         }
     }
 
-    public function show(PurchaseReturnInvoice $purchase_return): JsonResponse
+    /**
+     * Display the specified purchase return.
+     */
+    public function show(PurchaseReturn $purchase_return): JsonResponse
     {
-        $purchase_return->load(['supplier', 'originalInvoice', 'items', 'creator']);
+        $purchase_return->load(['supplier', 'referenceInvoice', 'details.batch', 'details.product', 'creator']);
         return $this->successResponse(new PurchaseReturnResource($purchase_return));
     }
 
-    public function destroy(PurchaseReturnInvoice $purchase_return): JsonResponse
+    /**
+     * Remove the specified purchase return.
+     */
+    public function destroy(PurchaseReturn $purchase_return): JsonResponse
     {
+        // Only allow deleting draft returns
         if ($purchase_return->status !== 'draft') {
             return $this->errorResponse('Only draft returns can be deleted', 422);
         }
 
+        // Observer will handle reversing inventory and supplier balance
         $purchase_return->delete();
         return $this->successResponse(null, 'Purchase return deleted successfully');
-    }
-
-    public function post(PurchaseReturnInvoice $purchase_return): JsonResponse
-    {
-        if ($purchase_return->status !== 'draft') {
-            return $this->errorResponse('Only draft returns can be posted', 422);
-        }
-
-        try {
-            DB::beginTransaction();
-
-            $manager = request()->user();
-
-            // Process each item and update inventory
-            foreach ($purchase_return->items as $item) {
-                $product = null;
-
-                // Try to find product by SKU first
-                if ($item->product_code) {
-                    $product = Product::where('sku', $item->product_code)->first();
-                }
-
-                // If not found by SKU, try by name
-                if (!$product && $item->product_name) {
-                    $product = Product::where('product_name', $item->product_name)
-                        ->where('supplier_id', $purchase_return->supplier_id)
-                        ->first();
-                }
-
-                // If still not found, try from original item
-                if (!$product && $item->original_item_id && $item->originalItem && $item->originalItem->product_id) {
-                    $product = Product::find($item->originalItem->product_id);
-                }
-
-                if ($product) {
-                    // Update product stock (decrease, convert to pieces)
-                    $quantityInPieces = $item->getQuantityInPieces();
-                    $stockBefore = $product->current_stock;
-                    $product->updateStock(-$quantityInPieces, 'return');
-                    $stockAfter = $product->current_stock;
-
-                    // Create inventory movement
-                    $movement = InventoryMovement::create([
-                        'product_id' => $product->product_id,
-                        'movement_type' => 'return',
-                        'reference_type' => 'purchase_return',
-                        'reference_id' => $purchase_return->return_invoice_id,
-                        'quantity' => -$quantityInPieces,
-                        'stock_before' => $stockBefore,
-                        'stock_after' => $stockAfter,
-                        'unit_price' => $item->unit_price,
-                        'notes' => "From return invoice: {$purchase_return->return_invoice_number}. Reason: " . ($item->reason ?? 'N/A'),
-                        'created_by' => $manager->manager_id,
-                    ]);
-
-                    // Link item to product and movement
-                    $item->product_id = $product->product_id;
-                    $item->inventory_movement_id = $movement->movement_id;
-                    $item->save();
-                }
-            }
-
-            $purchase_return->status = 'completed';
-            $purchase_return->save();
-
-            // TODO: Create journal entry here when accounting system is ready
-
-            DB::commit();
-
-            return $this->successResponse(
-                new PurchaseReturnResource($purchase_return->load(['supplier', 'originalInvoice', 'items'])),
-                'Purchase return posted successfully'
-            );
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Purchase return post error: ' . $e->getMessage());
-            return $this->errorResponse('Failed to post purchase return', 500);
-        }
     }
 }
