@@ -30,9 +30,9 @@ return new class extends Migration
 
             $table->foreign('rep_id')->references('rep_id')->on('representatives')->onDelete('cascade');
             $table->foreign('created_by')->references('manager_id')->on('managers')->onDelete('set null');
-            $table->index(['rep_id', 'transaction_type']);
-            $table->index(['related_type', 'related_id']);
-            $table->index('created_at');
+            $table->index(['rep_id', 'transaction_type'], 'rep_balance_trans_rep_type_idx');
+            $table->index(['related_type', 'related_id'], 'rep_balance_trans_related_idx');
+            $table->index('created_at', 'rep_balance_trans_created_idx');
         });
     }
 
