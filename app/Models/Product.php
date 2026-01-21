@@ -61,7 +61,7 @@ class Product extends Model
     public function getBaseUnit()
     {
         return $this->productUnits()->where('is_base_unit', true)->first();
-    }
+        }
 
     /**
      * Get current stock quantity (sum of all active batches)
@@ -100,7 +100,7 @@ class Product extends Model
 
         if ($warehouseId) {
             $query->where('warehouse_id', $warehouseId);
-        }
+    }
 
         if ($quantity) {
             $query->where('quantity_current', '>=', $quantity);
@@ -125,7 +125,7 @@ class Product extends Model
 
         if ($quantity) {
             $query->where('quantity_current', '>=', $quantity);
-        }
+            }
 
         return $query->get();
     }
