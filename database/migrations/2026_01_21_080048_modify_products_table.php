@@ -12,10 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // First, drop foreign key constraint if it exists
-        // Get the actual foreign key constraint name
-        $foreignKeyName = null;
+        // First, drop foreign key constraint if it exists using raw SQL
         try {
+            // Get the actual foreign key constraint name
             $result = DB::select("
                 SELECT CONSTRAINT_NAME 
                 FROM information_schema.KEY_COLUMN_USAGE 
@@ -27,35 +26,19 @@ return new class extends Migration
             ");
             
             if (!empty($result) && isset($result[0]->CONSTRAINT_NAME)) {
-                $foreignKeyName = $result[0]->CONSTRAINT_NAME;
+                $fkName = $result[0]->CONSTRAINT_NAME;
+                // Drop foreign key using raw SQL
+                DB::statement("ALTER TABLE products DROP FOREIGN KEY `{$fkName}`");
             }
         } catch (\Exception $e) {
-            // If query fails, try alternative method
-        }
-
-        // Drop foreign key if it exists
-        if ($foreignKeyName) {
-            Schema::table('products', function (Blueprint $table) use ($foreignKeyName) {
-                try {
-                    $table->dropForeign([$foreignKeyName]);
-                } catch (\Exception $e) {
-                    // Foreign key might not exist, try dropping by column name
-                    try {
-                        $table->dropForeign(['supplier_id']);
-                    } catch (\Exception $e2) {
-                        // Ignore if it doesn't exist
-                    }
-                }
-            });
-        } else {
-            // Try dropping by column name directly
-            Schema::table('products', function (Blueprint $table) {
-                try {
+            // If foreign key doesn't exist or query fails, try dropping by column name
+            try {
+                Schema::table('products', function (Blueprint $table) {
                     $table->dropForeign(['supplier_id']);
-                } catch (\Exception $e) {
-                    // Ignore if it doesn't exist
-                }
-            });
+                });
+            } catch (\Exception $e2) {
+                // Foreign key doesn't exist, continue
+            }
         }
 
         Schema::table('products', function (Blueprint $table) {
