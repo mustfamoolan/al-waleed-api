@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Models\Product;
+use App\Http\Resources\ProductResource;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -12,12 +13,12 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::with(['category', 'baseUnit', 'packUnit'])->get();
-        return response()->json($products);
+        return ProductResource::collection($products);
     }
 
     public function show(Product $product)
     {
-        return response()->json($product->load(['category', 'baseUnit', 'packUnit', 'suppliers', 'balances']));
+        return new ProductResource($product->load(['category', 'baseUnit', 'packUnit', 'suppliers', 'balances']));
     }
 
     public function store(StoreProductRequest $request)

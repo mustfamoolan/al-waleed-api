@@ -15,10 +15,10 @@ class CategoryResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'category_id' => $this->category_id,
-            'category_name' => $this->category_name,
+            'category_id' => $this->id,
+            'category_name' => $this->name,
             'description' => $this->description,
-            'is_active' => $this->is_active,
+            'is_active' => (bool) $this->is_active,
             'products_count' => $this->whenLoaded('products', fn() => $this->products->count()),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

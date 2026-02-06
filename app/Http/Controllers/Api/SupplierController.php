@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
+use App\Http\Resources\SupplierResource;
 use Illuminate\Http\Request;
 
 class SupplierController extends Controller
 {
     public function index()
     {
-        return response()->json(Supplier::with('account')->get());
+        return SupplierResource::collection(Supplier::with('account')->get());
     }
 
     public function store(Request $request)
@@ -36,7 +37,7 @@ class SupplierController extends Controller
 
     public function show(Supplier $supplier)
     {
-        return response()->json($supplier->load('account'));
+        return new SupplierResource($supplier->load('account'));
     }
 
     public function update(Request $request, Supplier $supplier)

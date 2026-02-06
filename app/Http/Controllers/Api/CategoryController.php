@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductCategory;
+use App\Http\Resources\CategoryResource;
 use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
     public function index()
     {
-        return response()->json(ProductCategory::with('parent')->get());
+        return CategoryResource::collection(ProductCategory::with('parent')->get());
     }
 
     public function store(Request $request)
@@ -26,7 +27,7 @@ class CategoryController extends Controller
 
     public function show(ProductCategory $category)
     {
-        return response()->json($category->load('parent', 'children'));
+        return new CategoryResource($category->load('parent', 'children'));
     }
 
     public function update(Request $request, ProductCategory $category)
