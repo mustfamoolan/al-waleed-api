@@ -1,14 +1,12 @@
 # Finance API
 
-## Cash Accounts
-**GET** `/api/cash-accounts`
-**POST** `/api/cash-accounts`
+
 
 ## Receipts
 
 ### Create Receipt (Draft)
 **POST** `/api/receipts`
-- `cash_account_id`, `amount_iqd`, `receipt_type` (customer_payment / general_income)
+- `amount_iqd`, `receipt_type` (customer_payment / general_income)
 
 ### Allocate to Invoice
 **POST** `/api/receipts/{id}/allocate`
@@ -22,7 +20,7 @@
 
 ### Create Payment (Draft)
 **POST** `/api/payments`
-- `cash_account_id`, `amount_iqd`, `payment_type` (supplier_payment / expense / ...)
+- `amount_iqd`, `payment_type` (supplier_payment / expense / ...)
 
 ### Allocate to Invoice
 **POST** `/api/payments/{id}/allocate`

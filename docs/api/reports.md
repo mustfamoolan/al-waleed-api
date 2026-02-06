@@ -26,8 +26,8 @@
 - Return: Total Receivables/Payables, Top Debtors/Creditors.
 
 **GET** `/api/reports/cash-movements`
-- `cash_account_id` (required)
-- Return: Inflow/Outflow.
+- `date_from`, `date_to`
+- Return: Inflow/Outflow of Main Cashbox.
 
 **GET** `/api/reports/customer-profit`
 - `customer_id`
