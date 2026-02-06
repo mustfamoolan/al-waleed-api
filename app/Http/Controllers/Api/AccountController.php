@@ -3,52 +3,49 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreAccountRequest;
 use App\Models\Account;
 use Illuminate\Http\Request;
 
 class AccountController extends Controller
 {
-    // Get full tree
     public function index()
     {
+        // Return tree structure
         $accounts = Account::root()->with('childrenRecursive')->get();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $accounts,
-        ]);
+        return response()->json($accounts);
     }
 
-    // Get flat list (for dropdowns)
-    public function list()
+    public function show(Account $account)
     {
-        $accounts = Account::all();
-        return response()->json([
-            'status' => 'success',
-            'data' => $accounts,
-        ]);
+        return response()->json($account->load('children'));
     }
 
-    // Create Account
-    public function store(Request $request)
+    public function store(StoreAccountRequest $request)
     {
-        $validated = $request->validate([
-            'account_code' => 'required|string|unique:accounts,account_code',
-            'name' => 'required|string',
-            'type' => 'required|in:asset,liability,equity,revenue,expense',
-            'parent_id' => 'nullable|exists:accounts,id',
-            'is_postable' => 'boolean',
+        $account = Account::create([
+            'account_code' => $request->account_code,
+            'name' => $request->name,
+            'type' => $request->type,
+            'parent_id' => $request->parent_id,
+            'is_postable' => $request->is_postable ?? false,
+            'description' => $request->description,
+            'created_by' => auth()->id(),
+        ]);
+
+        return response()->json(['message' => 'تم إنشاء الحساب بنجاح', 'account' => $account], 201);
+    }
+
+    public function update(Request $request, Account $account)
+    {
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
+            'is_postable' => 'sometimes|boolean',
         ]);
 
-        $validated['created_by'] = $request->user()->id;
+        $account->update($request->only(['name', 'description', 'is_postable']));
 
-        $account = Account::create($validated);
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'تم إضافة الحساب بنجاح',
-            'data' => $account,
-        ], 201);
+        return response()->json(['message' => 'تم تحديث الحساب بنجاح', 'account' => $account]);
     }
 }

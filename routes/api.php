@@ -24,4 +24,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::patch('users/{user}/status', [UserController::class, 'toggleStatus']);
     Route::patch('users/{user}/password', [UserController::class, 'changePassword']);
+
+    // Accounting
+    Route::apiResource('accounts', \App\Http\Controllers\Api\AccountController::class);
+
+    Route::get('journal-entries', [\App\Http\Controllers\Api\JournalEntryController::class, 'index']);
+    Route::get('journal-entries/{journalEntry}', [\App\Http\Controllers\Api\JournalEntryController::class, 'show']);
+    Route::post('journal-entries/manual', [\App\Http\Controllers\Api\JournalEntryController::class, 'storeManual']);
+    Route::post('journal-entries/{journalEntry}/post', [\App\Http\Controllers\Api\JournalEntryController::class, 'post']);
+    Route::post('journal-entries/{journalEntry}/cancel', [\App\Http\Controllers\Api\JournalEntryController::class, 'cancel']);
 });
