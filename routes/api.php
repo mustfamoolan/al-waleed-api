@@ -80,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Finance (Stage 7)
     Route::apiResource('cash-accounts', \App\Http\Controllers\Api\CashAccountController::class);
+    Route::patch('cash-accounts/{cashAccount}/status', [\App\Http\Controllers\Api\CashAccountController::class, 'toggleStatus']);
 
     Route::post('receipts', [\App\Http\Controllers\Api\ReceiptController::class, 'store']);
     Route::get('receipts/{receipt}', [\App\Http\Controllers\Api\ReceiptController::class, 'show']);
