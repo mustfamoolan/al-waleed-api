@@ -16,14 +16,15 @@ class CustomerResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'customer_id' => $this->customer_id,
-            'customer_name' => $this->customer_name,
-            'phone_number' => $this->phone_number,
+            'customer_id' => $this->id,
+            'customer_name' => $this->name,
+            'phone_number' => $this->phone,
             'address' => $this->address,
             'total_debt' => (float) $this->total_debt,
             'total_paid' => (float) $this->total_paid,
             'last_payment_date' => $this->last_payment_date,
             'status' => $this->status,
+            'is_active' => (bool) $this->is_active,
             'notes' => $this->notes,
             'balance' => new CustomerBalanceResource($this->whenLoaded('balance')),
             'representatives' => RepresentativeResource::collection($this->whenLoaded('representatives')),

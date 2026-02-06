@@ -15,9 +15,10 @@ class CashAccountResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'account_id' => $this->id,
+            'id' => $this->id,
             'name' => $this->name,
             'type' => $this->type,
+            'account_id' => $this->account_id,
             'currency' => $this->currency,
             'is_active' => (bool) $this->is_active,
             'current_balance' => (float) ($this->current_balance ?? 0),
