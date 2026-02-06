@@ -18,7 +18,8 @@ class DatabaseSeeder extends Seeder
         // Seed Manager
         // Seed Manager
         User::create([
-            'name' => 'Manager User',
+            'name' => 'M
+            anager User',
             'phone' => '07700000000',
             'password' => '123456', // Will be hashed by model cast
             'role' => 'manager',
