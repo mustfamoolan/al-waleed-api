@@ -25,6 +25,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('users/{user}/status', [UserController::class, 'toggleStatus']);
     Route::patch('users/{user}/password', [UserController::class, 'changePassword']);
 
+    // Master Data
+    Route::apiResource('suppliers', \App\Http\Controllers\Api\SupplierController::class);
+    Route::apiResource('customers', \App\Http\Controllers\Api\CustomerController::class);
+    Route::apiResource('warehouses', \App\Http\Controllers\Api\WarehouseController::class);
+    Route::apiResource('parties', \App\Http\Controllers\Api\PartyController::class)->only(['index', 'show']);
+
     // Accounting
     Route::apiResource('accounts', \App\Http\Controllers\Api\AccountController::class);
 
@@ -60,7 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('customers/{customer}/addresses/{address}', [\App\Http\Controllers\Api\CustomerAddressController::class, 'destroy']);
 
     // Sales
-    Route::post('sales-invoices', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'store']);
+    Route::apiResource('sales-invoices', \App\Http\Controllers\Api\SalesInvoiceController::class);
     Route::post('sales-invoices/{invoice}/submit', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'submit']);
     Route::post('sales-invoices/{invoice}/approve', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'approve']);
     Route::post('sales-invoices/{invoice}/start-preparing', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'startPreparing']);

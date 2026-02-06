@@ -12,6 +12,16 @@ class SalesInvoiceController extends Controller
 {
     // Simplified CRUD for brevity. Focus on Workflow.
 
+    public function index()
+    {
+        return response()->json(SalesInvoice::with('customer', 'creator', 'lines')->get());
+    }
+
+    public function show(SalesInvoice $invoice)
+    {
+        return response()->json($invoice->load('customer', 'creator', 'lines'));
+    }
+
     public function store(Request $request)
     {
         // Validation... (Create Request class ideally)
