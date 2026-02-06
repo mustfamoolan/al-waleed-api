@@ -11,7 +11,7 @@ return new class extends Migration {
         Schema::create('cash_accounts', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->enum('type', ['cash', 'bank'])->default('cash')->after('name');
+            $table->enum('type', ['cash', 'bank'])->default('cash');
             $table->foreignId('account_id')->constrained('accounts')->restrictOnDelete(); // Linked GL Account
             $table->string('currency')->default('IQD');
             $table->boolean('is_active')->default(true);
