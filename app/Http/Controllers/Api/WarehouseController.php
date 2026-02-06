@@ -58,4 +58,14 @@ class WarehouseController extends Controller
             'message' => 'Warehouse deleted successfully'
         ]);
     }
+
+    public function toggleStatus(Warehouse $warehouse)
+    {
+        $warehouse->update(['is_active' => !$warehouse->is_active]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تغيير حالة المخزن بنجاح',
+            'is_active' => $warehouse->is_active
+        ]);
+    }
 }

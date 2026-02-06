@@ -9,7 +9,7 @@ class Unit extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'is_base'];
+    protected $fillable = ['name', 'is_base', 'is_active'];
 
     public function scopeBase($query)
     {

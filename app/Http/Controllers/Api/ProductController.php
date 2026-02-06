@@ -63,4 +63,14 @@ class ProductController extends Controller
 
         return response()->json(['message' => 'تم تحديث الموردين للمنتج']);
     }
+
+    public function toggleStatus(Product $product)
+    {
+        $product->update(['is_active' => !$product->is_active]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تغيير حالة المنتج بنجاح',
+            'is_active' => $product->is_active
+        ]);
+    }
 }

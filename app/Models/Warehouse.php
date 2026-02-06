@@ -12,5 +12,6 @@ class Warehouse extends Model
     protected $fillable = [
         'name',
         'location',
+        'is_active',
     ];
 }

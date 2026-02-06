@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('suppliers', \App\Http\Controllers\Api\SupplierController::class);
     Route::apiResource('customers', \App\Http\Controllers\Api\CustomerController::class);
     Route::apiResource('warehouses', \App\Http\Controllers\Api\WarehouseController::class);
+    Route::patch('warehouses/{warehouse}/status', [\App\Http\Controllers\Api\WarehouseController::class, 'toggleStatus']);
     Route::apiResource('parties', \App\Http\Controllers\Api\PartyController::class)->only(['index', 'show']);
 
     // Accounting
@@ -42,8 +43,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Inventory & Products
     Route::apiResource('categories', \App\Http\Controllers\Api\CategoryController::class);
+    Route::patch('categories/{category}/status', [\App\Http\Controllers\Api\CategoryController::class, 'toggleStatus']);
+
     Route::apiResource('units', \App\Http\Controllers\Api\UnitController::class);
+    Route::patch('units/{unit}/status', [\App\Http\Controllers\Api\UnitController::class, 'toggleStatus']);
+
     Route::apiResource('products', \App\Http\Controllers\Api\ProductController::class);
+    Route::patch('products/{product}/status', [\App\Http\Controllers\Api\ProductController::class, 'toggleStatus']);
     Route::post('products/{product}/suppliers', [\App\Http\Controllers\Api\ProductController::class, 'syncSuppliers']);
 
     Route::get('inventory/balances', [\App\Http\Controllers\Api\InventoryController::class, 'balances']);
@@ -87,6 +93,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('customers', \App\Http\Controllers\Api\CustomerController::class);
     Route::patch('customers/{customer}/status', [\App\Http\Controllers\Api\CustomerController::class, 'toggleStatus']);
+    Route::apiResource('customers.addresses', \App\Http\Controllers\Api\CustomerAddressController::class);
 
     Route::get('opening-balances/status', [\App\Http\Controllers\Api\OpeningBalanceController::class, 'status']);
     Route::post('opening-balances', [\App\Http\Controllers\Api\OpeningBalanceController::class, 'store']);

@@ -16,6 +16,7 @@ class Customer extends Model
         'sales_type',
         'credit_limit',
         'account_id',
+        'is_active',
     ];
 
     public function account()

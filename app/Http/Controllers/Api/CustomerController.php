@@ -19,9 +19,10 @@ class CustomerController extends Controller
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string',
-            'sales_type' => 'required|in:wholesale,retail',
+            'sales_type' => 'required|in:cash,credit',
             'credit_limit' => 'numeric|min:0',
             'account_id' => 'nullable|exists:accounts,id',
+            'is_active' => 'boolean',
         ]);
 
         $customer = Customer::create($validated);
@@ -44,9 +45,10 @@ class CustomerController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'phone' => 'sometimes|required|string|max:20',
             'address' => 'nullable|string',
-            'sales_type' => 'sometimes|required|in:wholesale,retail',
+            'sales_type' => 'sometimes|required|in:cash,credit',
             'credit_limit' => 'numeric|min:0',
             'account_id' => 'nullable|exists:accounts,id',
+            'is_active' => 'boolean',
         ]);
 
         $customer->update($validated);
@@ -64,6 +66,16 @@ class CustomerController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Customer deleted successfully'
+        ]);
+    }
+
+    public function toggleStatus(Customer $customer)
+    {
+        $customer->update(['is_active' => !$customer->is_active]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تغيير حالة الزبون بنجاح',
+            'is_active' => $customer->is_active
         ]);
     }
 }

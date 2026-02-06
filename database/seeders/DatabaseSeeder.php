@@ -28,6 +28,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             AccountSeeder::class,
+            UnitSeeder::class,
+            CategorySeeder::class,
         ]);
 
         // User::factory(10)->create();
