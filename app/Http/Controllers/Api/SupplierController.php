@@ -68,4 +68,14 @@ class SupplierController extends Controller
             'message' => 'Supplier deleted successfully'
         ]);
     }
+
+    public function toggleStatus(Supplier $supplier)
+    {
+        $supplier->update(['is_active' => !$supplier->is_active]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم تغيير حالة المورد بنجاح',
+            'is_active' => $supplier->is_active
+        ]);
+    }
 }

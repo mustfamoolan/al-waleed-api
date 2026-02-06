@@ -17,6 +17,7 @@ class Supplier extends Model
         'exchange_rate',
         'account_id',
         'opening_balance',
+        'is_active',
     ];
 
     public function account()
