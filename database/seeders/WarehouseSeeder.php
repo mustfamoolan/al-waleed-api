@@ -17,7 +17,6 @@ class WarehouseSeeder extends Seeder
             ['name' => 'المستودع الرئيسي'],
             [
                 'location' => 'الموقع الرئيسي',
-                'manager_name' => null,
                 'is_active' => true,
             ]
         );
