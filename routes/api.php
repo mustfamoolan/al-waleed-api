@@ -84,4 +84,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('payments/{payment}', [\App\Http\Controllers\Api\PaymentController::class, 'show']);
     Route::post('payments/{payment}/allocate', [\App\Http\Controllers\Api\PaymentController::class, 'allocate']);
     Route::post('payments/{payment}/post', [\App\Http\Controllers\Api\PaymentController::class, 'post']);
+
+    // Payroll & Targets (Stage 8)
+    Route::apiResource('attendance', \App\Http\Controllers\Api\AttendanceController::class)->only(['index', 'store']);
+    Route::apiResource('payroll-adjustments', \App\Http\Controllers\Api\PayrollAdjustmentController::class)->only(['index', 'store']);
+    Route::apiResource('agent-targets', \App\Http\Controllers\Api\AgentTargetController::class)->only(['index', 'store']);
+
+    Route::post('payroll-runs/calculate', [\App\Http\Controllers\Api\PayrollRunController::class, 'calculate']);
+    Route::post('payroll-runs/{run}/approve', [\App\Http\Controllers\Api\PayrollRunController::class, 'approve']);
+    Route::post('payroll-runs/{run}/post', [\App\Http\Controllers\Api\PayrollRunController::class, 'post']);
+    Route::get('payroll-runs', [\App\Http\Controllers\Api\PayrollRunController::class, 'index']);
+    Route::get('payroll-runs/{run}', [\App\Http\Controllers\Api\PayrollRunController::class, 'show']);
 });

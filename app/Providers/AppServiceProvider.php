@@ -25,5 +25,6 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\SalesReturn::observe(\App\Observers\SalesReturnObserver::class);
         \App\Models\Receipt::observe(\App\Observers\ReceiptObserver::class);
         \App\Models\Payment::observe(\App\Observers\PaymentObserver::class);
+        \App\Models\PayrollRun::observe(\App\Observers\PayrollRunObserver::class);
     }
 }
