@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Http\Resources;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class EmployeeResource extends JsonResource
+{
+    /**
+     * Transform the resource into an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(Request $request): array
+    {
+        return [
+            'emp_id' => $this->emp_id,
+            'full_name' => $this->full_name,
+            'phone_number' => $this->phone_number,
+            'job_role' => $this->job_role,
+            'profile_image' => $this->profile_image,
+            'profile_image_url' => $this->profile_image ? asset('storage/' . $this->profile_image) : null,
+            'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
+        ];
+    }
+}
