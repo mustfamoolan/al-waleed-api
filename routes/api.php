@@ -1,16 +1,27 @@
-Route::prefix('auth')->group(function () {
-Route::post('login', [App\Http\Controllers\Api\AuthController::class, 'login']);
-Route::post('logout', [App\Http\Controllers\Api\AuthController::class, 'logout'])->middleware('auth:sanctum');
-Route::get('me', [App\Http\Controllers\Api\AuthController::class, 'me'])->middleware('auth:sanctum');
-});
+<?php
 
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\UserController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+*/
+
+// Public Routes
+Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/register', [AuthController::class, 'register']); // Optional public register
+
+// Protected Routes
 Route::middleware('auth:sanctum')->group(function () {
-Route::apiResource('users', App\Http\Controllers\Api\UserController::class);
+    // Auth
+    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('auth/me', [AuthController::class, 'me']);
 
-// Accounts
-Route::prefix('accounts')->group(function () {
-Route::get('/', [App\Http\Controllers\Api\AccountController::class, 'index']); // Tree
-Route::get('/list', [App\Http\Controllers\Api\AccountController::class, 'list']); // List
-Route::post('/', [App\Http\Controllers\Api\AccountController::class, 'store']); // Create
-});
+    // Users Management
+    Route::apiResource('users', UserController::class);
+    Route::patch('users/{user}/status', [UserController::class, 'toggleStatus']);
+    Route::patch('users/{user}/password', [UserController::class, 'changePassword']);
 });

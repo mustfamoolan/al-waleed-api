@@ -3,83 +3,63 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
 use App\Models\User;
-use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
-    // Login with Phone & Password
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'phone' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
         $user = User::where('phone', $request->phone)->first();
 
-        // Check user exists, password correct, and is active
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'بيانات الدخول غير صحيحة',
-            ], 401);
+            return response()->json(['message' => 'بيانات الدخول غير صحيحة'], 401);
         }
 
-        if ($user->status !== 'active') {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'الحساب معطل، يرجى مراجعة الإدارة',
-            ], 403);
+        if ($user->status === 'disabled') {
+            return response()->json(['message' => 'هذا الحساب معطل، يرجى مراجعة الإدارة'], 403);
         }
 
-        // Create Token
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Audit Log
-        AuditLog::create([
-            'user_id' => $user->id,
-            'action' => 'LOGIN',
-            'note' => 'User logged in successfully',
-        ]);
-
         return response()->json([
-            'status' => 'success',
             'message' => 'تم تسجيل الدخول بنجاح',
-            'data' => [
-                'user' => $user,
-                'token' => $token,
-            ],
+            'token' => $token,
+            'user' => $user,
         ]);
     }
 
-    // Logout
+    public function register(RegisterRequest $request)
+    {
+        // This might be administrative, but having a basic register endpoint is complying with standard flow
+        $user = User::create([
+            'name' => $request->name,
+            'phone' => $request->phone,
+            'password' => Hash::make($request->password),
+            'role' => $request->role ?? 'employee',
+        ]);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'تم إنشاء الحساب بنجاح',
+            'token' => $token,
+            'user' => $user,
+        ], 201);
+    }
+
     public function logout(Request $request)
     {
-        // Audit Log
-        AuditLog::create([
-            'user_id' => $request->user()->id,
-            'action' => 'LOGOUT',
-            'note' => 'User logged out',
-        ]);
-
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'تم تسجيل الخروج بنجاح',
-        ]);
+        return response()->json(['message' => 'تم تسجيل الخروج بنجاح']);
     }
 
-    // Get current user details
     public function me(Request $request)
     {
-        return response()->json([
-            'status' => 'success',
-            'data' => $request->user(),
-        ]);
+        return response()->json($request->user());
     }
 }

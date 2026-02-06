@@ -19,6 +19,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \App\Models\PurchaseInvoice::observe(\App\Observers\PurchaseInvoiceObserver::class);
+        \App\Models\PurchaseReturn::observe(\App\Observers\PurchaseReturnObserver::class);
     }
 }

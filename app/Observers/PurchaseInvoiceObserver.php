@@ -2,112 +2,123 @@
 
 namespace App\Observers;
 
+use App\Models\InventoryBalance;
+use App\Models\InventoryTransaction;
+use App\Models\InventoryTransactionLine;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
 use App\Models\PurchaseInvoice;
-use App\Models\PurchaseInvoiceDetail;
-use App\Models\InventoryBatch;
-use App\Models\SupplierTransaction;
-use App\Models\ProductUnit;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class PurchaseInvoiceObserver
 {
-    /**
-     * Handle the PurchaseInvoice "created" event.
-     */
-    public function created(PurchaseInvoice $purchaseInvoice): void
+    public function updated(PurchaseInvoice $invoice)
     {
-        // When invoice is created, it's in draft status, no action needed
-    }
-
-    /**
-     * Handle the PurchaseInvoice "updated" event.
-     */
-    public function updated(PurchaseInvoice $purchaseInvoice): void
-    {
-        // Check if invoice status changed to approved/posted
-        // In the new system, we'll use payment_status or a separate 'status' field
-        // For now, we'll trigger on first update after creation when details are added
-        
-        // This will be handled by a separate method called from controller
-    }
-
-    /**
-     * Process invoice approval - called from controller
-     */
-    public function approve(PurchaseInvoice $purchaseInvoice): void
-    {
-        DB::beginTransaction();
-        try {
-            // Process each detail item
-            foreach ($purchaseInvoice->details()->get() as $detail) {
-                // Validate expiry date for food items
-                if (!$detail->expiry_date) {
-                    throw new \Exception("Expiry date is required for product: {$detail->product_name}");
-                }
-
-                // Get the unit
-                $unit = $detail->unit;
-                if (!$unit) {
-                    throw new \Exception("Unit not found for product: {$detail->product_name}");
-                }
-
-                // Convert quantity to base unit
-                $baseQuantity = $unit->convertToBaseUnit($detail->quantity);
-
-                // Calculate cost per base unit
-                $costPerBaseUnit = $detail->getCostPerBaseUnit();
-
-                // Create inventory batch
-                $batch = InventoryBatch::create([
-                    'product_id' => $detail->product_id,
-                    'warehouse_id' => $purchaseInvoice->warehouse_id,
-                    'batch_number' => $detail->batch_number ?? $this->generateBatchNumber($purchaseInvoice, $detail),
-                    'production_date' => null, // Can be added later if needed
-                    'expiry_date' => $detail->expiry_date,
-                    'cost_price' => $costPerBaseUnit,
-                    'quantity_initial' => $baseQuantity,
-                    'quantity_current' => $baseQuantity,
-                    'purchase_invoice_detail_id' => $detail->id,
-                    'status' => 'active',
+        if ($invoice->isDirty('status') && $invoice->status === 'posted') {
+            DB::transaction(function () use ($invoice) {
+                // 1. Create Inventory Transaction
+                $transaction = InventoryTransaction::create([
+                    'trans_date' => $invoice->invoice_date,
+                    'trans_type' => 'purchase',
+                    'warehouse_id' => 1, // Default warehouse or logic to pick one (assuming Main Warehouse for now)
+                    'reference_type' => 'purchase_invoice',
+                    'reference_id' => $invoice->id,
+                    'created_by' => auth()->id(),
+                    'note' => 'Generated from Purchase Invoice #' . $invoice->invoice_no,
                 ]);
 
-                Log::info("Created inventory batch {$batch->id} for product {$detail->product_id}");
-            }
+                foreach ($invoice->lines as $line) {
+                    $baseQty = $line->qty * $line->unit_factor;
+                    $costIqd = $line->is_free ? 0 : ($line->line_total_iqd / ($baseQty ?: 1)); // Cost per base unit
 
-            // Update supplier balance
-            $supplier = $purchaseInvoice->supplier;
-            $previousBalance = $supplier->current_balance ?? 0;
-            $newBalance = $previousBalance + $purchaseInvoice->total_amount;
+                    // Create Transaction Line
+                    InventoryTransactionLine::create([
+                        'inventory_transaction_id' => $transaction->id,
+                        'product_id' => $line->product_id,
+                        'qty' => $line->qty,
+                        'unit_id' => $line->unit_id,
+                        'unit_factor' => $line->unit_factor,
+                        'cost_iqd' => $costIqd,
+                    ]);
 
-            $supplier->current_balance = $newBalance;
-            $supplier->save();
+                    // Update Inventory Balance (Weighted Average)
+                    $balance = InventoryBalance::firstOrNew([
+                        'warehouse_id' => 1, // Default
+                        'product_id' => $line->product_id
+                    ]);
 
-            // Create supplier transaction (Credit - we owe the supplier)
-            SupplierTransaction::create([
-                'supplier_id' => $supplier->supplier_id,
-                'transaction_type' => 'purchase_invoice',
-                'reference_id' => $purchaseInvoice->invoice_id,
-                'debit' => 0,
-                'credit' => $purchaseInvoice->total_amount,
-                'balance_after' => $newBalance,
-                'transaction_date' => $purchaseInvoice->invoice_date,
-            ]);
+                    $oldQty = $balance->qty_on_hand ?? 0;
+                    $oldCost = $balance->avg_cost_iqd ?? 0;
+                    $newQty = $baseQty;
+                    $newCost = $costIqd;
 
-            DB::commit();
-            Log::info("Purchase invoice {$purchaseInvoice->invoice_id} approved successfully");
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("Error approving purchase invoice: " . $e->getMessage());
-            throw $e;
+                    if ($line->is_free) {
+                        // Free items increase Qty but don't add value -> reduced avg cost
+                        $totalValue = ($oldQty * $oldCost);
+                        $totalQty = $oldQty + $newQty;
+                        $balance->qty_on_hand = $totalQty;
+                        $balance->avg_cost_iqd = $totalQty > 0 ? $totalValue / $totalQty : 0;
+                    } else {
+                        $totalValue = ($oldQty * $oldCost) + ($newQty * $newCost);
+                        $totalQty = $oldQty + $newQty;
+                        $balance->qty_on_hand = $totalQty;
+                        $balance->avg_cost_iqd = $totalQty > 0 ? $totalValue / $totalQty : $newCost;
+                    }
+                    $balance->save();
+                }
+
+                // 2. Create Journal Entry
+                $journal = JournalEntry::create([
+                    'entry_date' => $invoice->invoice_date,
+                    'reference_type' => 'purchase_invoice',
+                    'reference_id' => $invoice->id,
+                    'description' => 'Purchase Invoice #' . $invoice->invoice_no,
+                    'status' => 'posted',
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Debit: Inventory (1301)
+                $inventoryAccount = \App\Models\Account::where('account_code', '1301')->first();
+                JournalEntryLine::create([
+                    'journal_entry_id' => $journal->id,
+                    'account_id' => $inventoryAccount->id,
+                    'debit_amount' => $invoice->total_iqd,
+                    'credit_amount' => 0,
+                ]);
+
+                // Credit: Supplier AP (2101)
+                $supplierAccount = \App\Models\Account::where('account_code', '2101')->first(); // Or supplier->account_id
+                JournalEntryLine::create([
+                    'journal_entry_id' => $journal->id,
+                    'account_id' => $invoice->supplier->account_id ?? $supplierAccount->id,
+                    'debit_amount' => 0,
+                    'credit_amount' => $invoice->total_iqd,
+                ]);
+
+                // If Paid, create Payment Entry (optional: can be separate, but handled here as requested)
+                if ($invoice->paid_iqd > 0) {
+                    // Logic for payment entry... ideally separate but implied 2nd entry or combined
+                    // Simplified: Just reducing AP and crediting Cash
+                    $cashAccount = \App\Models\Account::where('account_code', '1101')->first();
+
+                    JournalEntryLine::create([
+                        'journal_entry_id' => $journal->id,
+                        'account_id' => $invoice->supplier->account_id ?? $supplierAccount->id,
+                        'debit_amount' => $invoice->paid_iqd,
+                        'credit_amount' => 0,
+                    ]);
+
+                    JournalEntryLine::create([
+                        'journal_entry_id' => $journal->id,
+                        'account_id' => $cashAccount->id,
+                        'debit_amount' => 0,
+                        'credit_amount' => $invoice->paid_iqd,
+                    ]);
+                }
+
+                $invoice->journal_entry_id = $journal->id;
+                $invoice->saveQuietly();
+            });
         }
-    }
-
-    /**
-     * Generate batch number if not provided
-     */
-    private function generateBatchNumber(PurchaseInvoice $invoice, $detail): string
-    {
-        return 'BATCH-' . $invoice->invoice_number . '-' . $detail->product_id . '-' . time();
     }
 }
