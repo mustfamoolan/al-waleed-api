@@ -265,31 +265,31 @@ class ReportService
         $sales = SalesInvoice::where('status', 'delivered')
             // Assuming we use party_id link or source_user logic. 
             // If unified staff has party_id:
-            ->whereHas('party', function($q) use ($staffId) {
+            ->whereHas('party', function ($q) use ($staffId) {
                 // Determine party_id from staff_id? Staff model has user_id, user has generic party?
                 // For now, simpler check:
                 $staff = Staff::find($staffId);
-                if($staff && $staff->user_id) {
-                     $q->where('source_user_id', $staff->user_id); // If they bought it? Or just party link.
+                if ($staff && $staff->user_id) {
+                    $q->where('source_user_id', $staff->user_id); // If they bought it? Or just party link.
                 }
             })
             ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
             ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
             ->get();
-            
+
         // Payments (Advances)
         $payments = Payment::where('staff_id', $staffId)
             ->where('status', 'posted')
             ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
             ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
             ->get();
-            
+
         // Adjustments
         $adjustments = \App\Models\PayrollAdjustment::where('staff_id', $staffId)
             ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
             ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
             ->get();
-            
+
         return [
             'sales' => $sales,
             'payments' => $payments,
@@ -301,21 +301,21 @@ class ReportService
     public function getDebtsSummary($dateAsOf = null)
     {
         $date = $dateAsOf ?? now();
-        
+
         // Customers (Receivables)
-        $customers = Customer::all()->map(function($c) use ($date) {
+        $customers = Customer::all()->map(function ($c) use ($date) {
             // Simplified balance calculation. In real app, optimize.
-            $debit = SalesInvoice::where('customer_id', $c->id)->where('status','delivered')->whereDate('created_at', '<=', $date)->sum('total_iqd');
-            $credit = Receipt::where('customer_id', $c->id)->where('status','posted')->whereDate('created_at', '<=', $date)->sum('amount_iqd');
+            $debit = SalesInvoice::where('customer_id', $c->id)->where('status', 'delivered')->whereDate('created_at', '<=', $date)->sum('total_iqd');
+            $credit = Receipt::where('customer_id', $c->id)->where('status', 'posted')->whereDate('created_at', '<=', $date)->sum('amount_iqd');
             $balance = $debit - $credit;
             return ['id' => $c->id, 'name' => $c->name, 'balance' => $balance];
         })->filter(fn($c) => $c['balance'] > 0)->sortByDesc('balance')->values();
 
         // Suppliers (Payables)
-        $suppliers = Supplier::all()->map(function($s) use ($date) {
-            $credit = PurchaseInvoice::where('supplier_id', $s->id)->where('status','posted')->whereDate('created_at', '<=', $date)->sum('total_iqd');
-            $debit = Payment::where('supplier_id', $s->id)->where('status','posted')->whereDate('created_at', '<=', $date)->sum('amount_iqd');
-            $balance = $credit - $debit; 
+        $suppliers = Supplier::all()->map(function ($s) use ($date) {
+            $credit = PurchaseInvoice::where('supplier_id', $s->id)->where('status', 'posted')->whereDate('created_at', '<=', $date)->sum('total_iqd');
+            $debit = Payment::where('supplier_id', $s->id)->where('status', 'posted')->whereDate('created_at', '<=', $date)->sum('amount_iqd');
+            $balance = $credit - $debit;
             return ['id' => $s->id, 'name' => $s->name, 'balance' => $balance];
         })->filter(fn($s) => $s['balance'] > 0)->sortByDesc('balance')->values();
 
@@ -334,19 +334,22 @@ class ReportService
             ->join('sales_invoices', 'sales_invoices.id', '=', 'sales_invoice_lines.sales_invoice_id')
             ->join('products', 'products.id', '=', 'sales_invoice_lines.product_id')
             ->where('sales_invoices.status', 'delivered');
-        
-        if ($productId) $query->where('products.id', $productId);
-        if ($from) $query->whereDate('sales_invoices.created_at', '>=', $from);
-        if ($to) $query->whereDate('sales_invoices.created_at', '<=', $to);
-        
+
+        if ($productId)
+            $query->where('products.id', $productId);
+        if ($from)
+            $query->whereDate('sales_invoices.created_at', '>=', $from);
+        if ($to)
+            $query->whereDate('sales_invoices.created_at', '<=', $to);
+
         return $query->select(
-                'products.name',
-                DB::raw('SUM(sales_invoice_lines.qty) as sold_qty'),
-                DB::raw('SUM(sales_invoice_lines.line_total_iqd) as revenue'),
-                DB::raw('SUM(sales_invoice_lines.qty * sales_invoice_lines.cost_iqd_snapshot) as cost'),
-                DB::raw('SUM(sales_invoice_lines.line_total_iqd - (sales_invoice_lines.qty * sales_invoice_lines.cost_iqd_snapshot)) as profit'),
-                DB::raw('(SUM(sales_invoice_lines.line_total_iqd - (sales_invoice_lines.qty * sales_invoice_lines.cost_iqd_snapshot)) / NULLIF(SUM(sales_invoice_lines.line_total_iqd),0)) * 100 as margin_percent')
-            )
+            'products.name',
+            DB::raw('SUM(sales_invoice_lines.qty) as sold_qty'),
+            DB::raw('SUM(sales_invoice_lines.line_total_iqd) as revenue'),
+            DB::raw('SUM(sales_invoice_lines.qty * sales_invoice_lines.cost_iqd_snapshot) as cost'),
+            DB::raw('SUM(sales_invoice_lines.line_total_iqd - (sales_invoice_lines.qty * sales_invoice_lines.cost_iqd_snapshot)) as profit'),
+            DB::raw('(SUM(sales_invoice_lines.line_total_iqd - (sales_invoice_lines.qty * sales_invoice_lines.cost_iqd_snapshot)) / NULLIF(SUM(sales_invoice_lines.line_total_iqd),0)) * 100 as margin_percent')
+        )
             ->groupBy('products.name', 'products.id')
             ->orderByDesc('profit')
             ->get();
@@ -373,7 +376,7 @@ class ReportService
     // 12. Top/Low Products (Quantity)
     public function getProductPerformance($from = null, $to = null, $order = 'desc', $limit = 10)
     {
-         return DB::table('sales_invoice_lines')
+        return DB::table('sales_invoice_lines')
             ->join('sales_invoices', 'sales_invoices.id', '=', 'sales_invoice_lines.sales_invoice_id')
             ->join('products', 'products.id', '=', 'sales_invoice_lines.product_id')
             ->where('sales_invoices.status', 'delivered')
@@ -409,15 +412,16 @@ class ReportService
     public function getInventoryBalances($warehouseId = null)
     {
         $query = \App\Models\InventoryBalance::with('product');
-        if($warehouseId) $query->where('warehouse_id', $warehouseId);
+        if ($warehouseId)
+            $query->where('warehouse_id', $warehouseId);
         // Could filter by category via product relationship if needed
-        return $query->get()->map(function($bal){
-             return [
-                 'product' => $bal->product->name,
-                 'warehouse_id' => $bal->warehouse_id,
-                 'qty_on_hand' => $bal->qty_on_hand,
-                 // average_cost if tracked
-             ];
+        return $query->get()->map(function ($bal) {
+            return [
+                'product' => $bal->product->name,
+                'warehouse_id' => $bal->warehouse_id,
+                'qty_on_hand' => $bal->qty_on_hand,
+                // average_cost if tracked
+            ];
         });
     }
 
@@ -427,41 +431,42 @@ class ReportService
         $date = $dateAsOf ?? now();
         // This requires complex logic matching unallocated payments to invoices.
         // For now, simpler approach: return invoices that have remaining_iqd > 0 and are due.
-        
+
         if ($type === 'customer') {
-             return SalesInvoice::where('status', 'delivered')
-                 ->where('payment_type', 'credit')
-                 ->where('remaining_iqd', '>', 0)
-                 ->whereDate('due_date', '<', $date)
-                 ->with('customer')
-                 ->get()
-                 ->map(function($inv) use ($date) {
-                     $daysOverdue = \Carbon\Carbon::parse($inv->due_date)->diffInDays(\Carbon\Carbon::parse($date));
-                     return [
-                         'partner' => $inv->customer->name ?? 'Unknown',
-                         'invoice_no' => $inv->invoice_no,
-                         'remaining' => $inv->remaining_iqd,
-                         'due_date' => $inv->due_date,
-                         'days_overdue' => $daysOverdue
-                     ];
-                 });
+            return SalesInvoice::where('status', 'delivered')
+                ->where('payment_type', 'credit')
+                ->where('remaining_iqd', '>', 0)
+                ->whereDate('due_date', '<', $date)
+                ->with('customer')
+                ->get()
+                ->map(function ($inv) use ($date) {
+                    $daysOverdue = \Carbon\Carbon::parse($inv->due_date)->diffInDays(\Carbon\Carbon::parse($date));
+                    return [
+                        'partner' => $inv->customer->name ?? 'Unknown',
+                        'invoice_no' => $inv->invoice_no,
+                        'remaining' => $inv->remaining_iqd,
+                        'due_date' => $inv->due_date,
+                        'days_overdue' => $daysOverdue
+                    ];
+                });
         } else {
-             return PurchaseInvoice::where('status', 'posted')
-                 ->where('payment_type', 'credit')
-                 ->where('remaining_iqd', '>', 0)
-                 ->whereDate('due_date', '<', $date)
-                 ->with('supplier')
-                 ->get()
-                 ->map(function($inv) use ($date) {
-                     $daysOverdue = \Carbon\Carbon::parse($inv->due_date)->diffInDays(\Carbon\Carbon::parse($date));
-                     return [
-                         'partner' => $inv->supplier->name ?? 'Unknown',
-                         'invoice_no' => $inv->invoice_no,
-                         'remaining' => $inv->remaining_iqd,
-                         'due_date' => $inv->due_date,
-                         'days_overdue' => $daysOverdue
-                     ];
-                 });
+            return PurchaseInvoice::where('status', 'posted')
+                ->where('payment_type', 'credit')
+                ->where('remaining_iqd', '>', 0)
+                ->whereDate('due_date', '<', $date)
+                ->with('supplier')
+                ->get()
+                ->map(function ($inv) use ($date) {
+                    $daysOverdue = \Carbon\Carbon::parse($inv->due_date)->diffInDays(\Carbon\Carbon::parse($date));
+                    return [
+                        'partner' => $inv->supplier->name ?? 'Unknown',
+                        'invoice_no' => $inv->invoice_no,
+                        'remaining' => $inv->remaining_iqd,
+                        'due_date' => $inv->due_date,
+                        'days_overdue' => $daysOverdue
+                    ];
+                });
         }
     }
+}
 
