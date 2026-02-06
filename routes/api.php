@@ -95,4 +95,25 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('payroll-runs/{run}/post', [\App\Http\Controllers\Api\PayrollRunController::class, 'post']);
     Route::get('payroll-runs', [\App\Http\Controllers\Api\PayrollRunController::class, 'index']);
     Route::get('payroll-runs/{run}', [\App\Http\Controllers\Api\PayrollRunController::class, 'show']);
+
+    // Reports (Stage 9)
+    Route::get('reports/customer-statement', [\App\Http\Controllers\Api\ReportController::class, 'customerStatement']);
+    Route::get('reports/supplier-statement', [\App\Http\Controllers\Api\ReportController::class, 'supplierStatement']);
+    Route::get('reports/profit-summary', [\App\Http\Controllers\Api\ReportController::class, 'profitSummary']);
+    Route::get('reports/cash-movements', [\App\Http\Controllers\Api\ReportController::class, 'cashMovements']);
+    Route::get('reports/product-movement', [\App\Http\Controllers\Api\ReportController::class, 'productMovement']);
+    Route::get('reports/customer-purchases', [\App\Http\Controllers\Api\ReportController::class, 'customerPurchases']);
+    Route::get('reports/debts-summary', [\App\Http\Controllers\Api\ReportController::class, 'debtsSummary']);
+    Route::get('reports/product-profit', [\App\Http\Controllers\Api\ReportController::class, 'productProfit']);
+    Route::get('reports/top-products', [\App\Http\Controllers\Api\ReportController::class, 'topProducts']);
+    Route::get('reports/low-products', [\App\Http\Controllers\Api\ReportController::class, 'lowProducts']);
+    Route::get('reports/staff-financials', [\App\Http\Controllers\Api\ReportController::class, 'staffFinancials']);
+    Route::get('reports/agent-performance', [\App\Http\Controllers\Api\ReportController::class, 'agentPerformance']);
+
+    // Additional Reports
+    Route::get('reports/customer-profit', [\App\Http\Controllers\Api\ReportController::class, 'customerProfit']);
+    Route::get('reports/top-profit-products', [\App\Http\Controllers\Api\ReportController::class, 'topProfitProducts']);
+    Route::get('reports/low-profit-products', [\App\Http\Controllers\Api\ReportController::class, 'lowProfitProducts']);
+    Route::get('reports/inventory-balances', [\App\Http\Controllers\Api\ReportController::class, 'inventoryBalances']);
+    Route::get('reports/aging', [\App\Http\Controllers\Api\ReportController::class, 'aging']);
 });
