@@ -19,6 +19,11 @@ class Customer extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+        'credit_limit' => 'decimal:2',
+    ];
+
     public function account()
     {
         return $this->belongsTo(Account::class);

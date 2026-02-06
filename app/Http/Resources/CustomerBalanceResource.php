@@ -18,9 +18,9 @@ class CustomerBalanceResource extends JsonResource
         return [
             'balance_id' => $this->balance_id,
             'customer_id' => $this->customer_id,
-            'current_balance' => $this->current_balance,
-            'total_debt' => $this->total_debt,
-            'total_paid' => $this->total_paid,
+            'current_balance' => (float) $this->current_balance,
+            'total_debt' => (float) $this->total_debt,
+            'total_paid' => (float) $this->total_paid,
             'last_transaction_at' => $this->last_transaction_at,
             'customer' => new CustomerResource($this->whenLoaded('customer')),
             'created_at' => $this->created_at,

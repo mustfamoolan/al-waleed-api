@@ -17,6 +17,10 @@ class CashAccount extends Model
         'is_active',
     ];
 
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
     public function account()
     {
         return $this->belongsTo(Account::class);

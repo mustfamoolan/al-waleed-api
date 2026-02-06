@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\CashAccount;
+use App\Http\Resources\CashAccountResource;
 use Illuminate\Http\Request;
 
 class CashAccountController extends Controller
@@ -25,7 +26,7 @@ class CashAccountController extends Controller
             $account->current_balance = $receipts - $payments;
         }
 
-        return response()->json($accounts);
+        return CashAccountResource::collection($accounts);
     }
 
     public function store(Request $request)
@@ -47,7 +48,7 @@ class CashAccountController extends Controller
         ]);
 
         $account = CashAccount::create($request->all());
-        return response()->json($account, 201);
+        return new CashAccountResource($account);
     }
 
     public function update(Request $request, CashAccount $cashAccount)
@@ -70,7 +71,7 @@ class CashAccountController extends Controller
         ]);
 
         $cashAccount->update($request->all());
-        return response()->json($cashAccount);
+        return new CashAccountResource($cashAccount);
     }
 
     public function toggleStatus(CashAccount $cashAccount)
