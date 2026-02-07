@@ -14,12 +14,12 @@ class SalesInvoiceController extends Controller
 
     public function index()
     {
-        return response()->json(SalesInvoice::with('customer', 'creator', 'lines')->get());
+        return response()->json(SalesInvoice::with('customer', 'agent', 'creator', 'lines')->get());
     }
 
     public function show(SalesInvoice $invoice)
     {
-        return response()->json($invoice->load('customer', 'creator', 'lines'));
+        return response()->json($invoice->load('customer', 'agent', 'creator', 'lines'));
     }
 
     public function store(Request $request)
@@ -40,7 +40,8 @@ class SalesInvoiceController extends Controller
                 'source_type' => $request->source_type ?? 'office',
                 'source_user_id' => auth()->id(),
                 'party_id' => $request->party_id,
-                'customer_id' => $request->customer_id, // Optional
+                'customer_id' => $request->customer_id,
+                'agent_id' => $request->agent_id,
                 'payment_type' => $request->payment_type,
                 'due_date' => $request->due_date,
                 'delivery_required' => $request->delivery_required ?? false,
