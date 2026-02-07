@@ -46,13 +46,12 @@ return Application::configure(basePath: dirname(__DIR__))
                     ], 404);
                 }
 
-                // For other exceptions, return generic error in production
-                if (!app()->environment('local')) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Server error',
-                    ], 500);
-                }
+                // For other exceptions, return detailed error for debugging
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ], 500);
             }
         });
     })->create();
