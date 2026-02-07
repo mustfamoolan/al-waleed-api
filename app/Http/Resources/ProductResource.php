@@ -48,6 +48,7 @@ class ProductResource extends JsonResource
             'production_date' => $this->production_date instanceof \DateTime ? $this->production_date->format('Y-m-d') : $this->production_date,
             'expiry_date' => $this->expiry_date instanceof \DateTime ? $this->expiry_date->format('Y-m-d') : $this->expiry_date,
             'is_low_stock' => method_exists($this->resource, 'isLowStock') ? $this->isLowStock() : false,
+            'suppliers' => ProductSupplierResource::collection($this->whenLoaded('suppliers')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

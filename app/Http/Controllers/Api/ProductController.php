@@ -13,7 +13,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with(['category', 'baseUnit', 'packUnit', 'defaultSupplier.supplier'])->get();
+        $products = Product::with(['category', 'baseUnit', 'packUnit', 'defaultSupplier.supplier', 'suppliers.supplier'])->get();
         return ProductResource::collection($products);
     }
 
