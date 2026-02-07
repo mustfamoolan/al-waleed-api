@@ -11,9 +11,9 @@ class AccountController extends Controller
 {
     public function index()
     {
-        // Return tree structure
-        $accounts = Account::root()->with('childrenRecursive')->get();
-        return response()->json($accounts);
+        // Return flat list for simplicity in Desktop consumption if needed
+        // The WPF app expects List<Account> and filters by type='liability'
+        return AccountResource::collection(Account::all());
     }
 
     public function show(Account $account)
