@@ -23,6 +23,9 @@ return new class extends Migration {
             if (!Schema::hasColumn('suppliers', 'notes')) {
                 $table->text('notes')->nullable()->after('opening_balance');
             }
+            if (!Schema::hasColumn('suppliers', 'profile_image')) {
+                $table->string('profile_image')->nullable()->after('notes');
+            }
         });
     }
 

@@ -25,6 +25,15 @@ class Supplier extends Model
         'is_active',
     ];
 
+    public function getCurrentBalanceAttribute()
+    {
+        try {
+            return $this->account ? ($this->account->current_balance ?? 0) : ($this->opening_balance ?? 0);
+        } catch (\Exception $e) {
+            return $this->opening_balance ?? 0;
+        }
+    }
+
     protected $casts = [
         'is_active' => 'boolean',
         'exchange_rate' => 'decimal:6',

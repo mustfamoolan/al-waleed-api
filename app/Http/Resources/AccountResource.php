@@ -10,10 +10,10 @@ class AccountResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'account_id' => $this->account_id,
+            'id' => $this->id,
             'account_code' => $this->account_code,
-            'account_name' => $this->account_name,
-            'account_type' => $this->account_type,
+            'name' => $this->name,
+            'type' => $this->type,
             'parent_account_id' => $this->parent_account_id,
             'parent_account' => new AccountResource($this->whenLoaded('parentAccount')),
             'opening_balance' => $this->opening_balance,

@@ -26,8 +26,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('users/{user}/password', [UserController::class, 'changePassword']);
 
     // Master Data
-    Route::apiResource('suppliers', \App\Http\Controllers\Api\SupplierController::class);
-    Route::apiResource('customers', \App\Http\Controllers\Api\CustomerController::class);
     Route::apiResource('warehouses', \App\Http\Controllers\Api\WarehouseController::class);
     Route::patch('warehouses/{warehouse}/status', [\App\Http\Controllers\Api\WarehouseController::class, 'toggleStatus']);
     Route::apiResource('parties', \App\Http\Controllers\Api\PartyController::class)->only(['index', 'show']);
