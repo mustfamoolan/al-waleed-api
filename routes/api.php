@@ -33,6 +33,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Accounting
     Route::apiResource('accounts', \App\Http\Controllers\Api\AccountController::class);
 
+    // Opening Balances
+    Route::get('opening-balances/status', [\App\Http\Controllers\Api\OpeningBalanceController::class, 'status']);
+    Route::post('opening-balances', [\App\Http\Controllers\Api\OpeningBalanceController::class, 'store']);
+
     Route::get('journal-entries', [\App\Http\Controllers\Api\JournalEntryController::class, 'index']);
     Route::get('journal-entries/{journalEntry}', [\App\Http\Controllers\Api\JournalEntryController::class, 'show']);
     Route::post('journal-entries/manual', [\App\Http\Controllers\Api\JournalEntryController::class, 'storeManual']);
