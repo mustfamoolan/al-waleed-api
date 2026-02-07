@@ -84,6 +84,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('purchase-returns', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'store']);
     Route::post('purchase-returns/{purchaseReturn}/post', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'post']);
 
+    // Staff
+    Route::apiResource('staff', \App\Http\Controllers\Api\StaffController::class);
+
     // Pre-Stage 6 (Staff & Workflow)
     Route::apiResource('staff', \App\Http\Controllers\Api\StaffController::class);
     Route::get('customers/{customer}/addresses', [\App\Http\Controllers\Api\CustomerAddressController::class, 'index']);
