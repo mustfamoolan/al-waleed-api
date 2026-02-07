@@ -26,6 +26,36 @@ class OpeningBalanceController extends Controller
     }
 
     /**
+     * Delete existing opening balances (for re-initialization).
+     */
+    public function destroy()
+    {
+        $entry = JournalEntry::where('reference_type', 'opening_balance')->first();
+
+        if (!$entry) {
+            return response()->json(['message' => 'لا يوجد رصيد افتتاحي لحذفه.'], 404);
+        }
+
+        // Delete related inventory transactions
+        $invTrans = InventoryTransaction::where('reference_type', 'opening_balance')
+            ->where('reference_id', $entry->id)
+            ->first();
+
+        if ($invTrans) {
+            InventoryTransactionLine::where('inventory_transaction_id', $invTrans->id)->delete();
+            $invTrans->delete();
+        }
+
+        // Delete journal entry lines
+        JournalEntryLine::where('journal_entry_id', $entry->id)->delete();
+
+        // Delete journal entry
+        $entry->delete();
+
+        return response()->json(['message' => 'تم حذف الرصيد الافتتاحي بنجاح.']);
+    }
+
+    /**
      * Handle the submission of opening balances.
      */
     public function store(Request $request)
