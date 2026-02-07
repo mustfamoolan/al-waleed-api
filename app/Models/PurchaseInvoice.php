@@ -14,12 +14,16 @@ class PurchaseInvoice extends Model
         'supplier_invoice_no',
         'supplier_id',
         'invoice_date',
+        'warehouse_id',
         'currency',
         'exchange_rate',
         'subtotal_foreign',
         'discount_foreign',
         'total_foreign',
         'total_iqd',
+        'driver_fee',
+        'worker_fee',
+        'total_fees',
         'paid_iqd',
         'remaining_iqd',
         'status',
@@ -47,5 +51,15 @@ class PurchaseInvoice extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 }

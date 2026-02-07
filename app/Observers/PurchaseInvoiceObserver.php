@@ -20,7 +20,7 @@ class PurchaseInvoiceObserver
                 $transaction = InventoryTransaction::create([
                     'trans_date' => $invoice->invoice_date,
                     'trans_type' => 'purchase',
-                    'warehouse_id' => 1, // Default warehouse or logic to pick one (assuming Main Warehouse for now)
+                    'warehouse_id' => $invoice->warehouse_id ?? 1, // Use invoice warehouse or default
                     'reference_type' => 'purchase_invoice',
                     'reference_id' => $invoice->id,
                     'created_by' => auth()->id(),
@@ -43,7 +43,7 @@ class PurchaseInvoiceObserver
 
                     // Update Inventory Balance (Weighted Average)
                     $balance = InventoryBalance::firstOrNew([
-                        'warehouse_id' => 1, // Default
+                        'warehouse_id' => $invoice->warehouse_id ?? 1,
                         'product_id' => $line->product_id
                     ]);
 

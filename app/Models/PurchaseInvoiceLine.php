@@ -18,6 +18,8 @@ class PurchaseInvoiceLine extends Model
         'price_foreign',
         'line_total_foreign',
         'line_total_iqd',
+        'cost_per_unit',
+        'price_after_cost',
         'is_free',
         'notes',
     ];
