@@ -31,6 +31,8 @@ class StoreProductRequest extends FormRequest
             'piece_weight' => 'nullable|numeric|min:0',
             'weight_unit' => 'nullable|string|max:20',
             'carton_weight' => 'nullable|numeric|min:0',
+            'supplier_id' => 'required|exists:suppliers,id', // MANDATORY
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'is_active' => 'boolean',
         ];
     }

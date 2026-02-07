@@ -12,6 +12,7 @@ class Product extends Model
     protected $fillable = [
         'name',
         'sku',
+        'image_path',
         'category_id',
         'purchase_price',
         'sale_price_retail',
@@ -54,6 +55,11 @@ class Product extends Model
     public function suppliers()
     {
         return $this->hasMany(ProductSupplier::class);
+    }
+
+    public function defaultSupplier()
+    {
+        return $this->hasOne(ProductSupplier::class)->where('is_default', true)->with('supplier');
     }
 
     public function balances()

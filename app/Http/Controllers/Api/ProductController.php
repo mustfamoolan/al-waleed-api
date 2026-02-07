@@ -12,7 +12,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::with(['category', 'baseUnit', 'packUnit'])->get();
+        $products = Product::with(['category', 'baseUnit', 'packUnit', 'defaultSupplier.supplier'])->get();
         return ProductResource::collection($products);
     }
 
@@ -38,9 +38,26 @@ class ProductController extends Controller
             $data['carton_weight'] = $data['piece_weight'] * $data['units_per_pack'];
         }
 
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('products', 'public');
+            $data['image_path'] = $path;
+        }
+
         $product = Product::create($data);
 
-        return new ProductResource($product);
+        // Link default supplier (MANDATORY)
+        if (isset($data['supplier_id'])) {
+            ProductSupplier::create([
+                'product_id' => $product->id,
+                'supplier_id' => $data['supplier_id'],
+                'is_default' => true,
+                'last_purchase_price' => $data['purchase_price'] ?? 0,
+                'currency' => 'IQD',
+            ]);
+        }
+
+        return new ProductResource($product->load('defaultSupplier.supplier'));
     }
 
     public function update(Request $request, Product $product)
@@ -60,9 +77,31 @@ class ProductController extends Controller
             $data['carton_weight'] = $data['piece_weight'] * $data['units_per_pack'];
         }
 
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            // Delete old image if exists
+            if ($product->image_path && \Storage::disk('public')->exists($product->image_path)) {
+                \Storage::disk('public')->delete($product->image_path);
+            }
+            $path = $request->file('image')->store('products', 'public');
+            $data['image_path'] = $path;
+        }
+
         $product->update($data);
 
-        return new ProductResource($product);
+        // Update default supplier if changed
+        if (isset($data['supplier_id'])) {
+            // Remove old default
+            ProductSupplier::where('product_id', $product->id)->update(['is_default' => false]);
+
+            // Set new default or create if not exists
+            ProductSupplier::updateOrCreate(
+                ['product_id' => $product->id, 'supplier_id' => $data['supplier_id']],
+                ['is_default' => true, 'last_purchase_price' => $data['purchase_price'] ?? 0]
+            );
+        }
+
+        return new ProductResource($product->load('defaultSupplier.supplier'));
     }
 
     public function syncSuppliers(Request $request, Product $product)

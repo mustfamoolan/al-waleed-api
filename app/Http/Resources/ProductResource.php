@@ -28,6 +28,9 @@ class ProductResource extends JsonResource
             'category_id' => $this->category_id,
             'supplier' => new SupplierResource($this->whenLoaded('supplier')),
             'supplier_id' => $this->supplier_id,
+            'default_supplier' => $this->whenLoaded('defaultSupplier', function () {
+                return $this->defaultSupplier ? new SupplierResource($this->defaultSupplier->supplier) : null;
+            }),
             'unit_type' => $this->unit_type,
             'pieces_per_carton' => $this->units_per_pack, // Map migration field
             'piece_weight' => $this->piece_weight,

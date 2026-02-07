@@ -44,4 +44,9 @@ class Supplier extends Model
     {
         return $this->belongsTo(Account::class);
     }
+
+    public function products()
+    {
+        return $this->hasManyThrough(Product::class, ProductSupplier::class, 'supplier_id', 'id', 'id', 'product_id');
+    }
 }
