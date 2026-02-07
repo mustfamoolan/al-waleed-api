@@ -33,6 +33,11 @@ class ProductController extends Controller
         if (isset($data['pieces_per_carton']) && !isset($data['units_per_pack']))
             $data['units_per_pack'] = $data['pieces_per_carton'];
 
+        // Calculate carton weight automatically
+        if (isset($data['piece_weight']) && isset($data['units_per_pack'])) {
+            $data['carton_weight'] = $data['piece_weight'] * $data['units_per_pack'];
+        }
+
         $product = Product::create($data);
 
         return new ProductResource($product);
@@ -49,6 +54,11 @@ class ProductController extends Controller
             $data['sale_price_wholesale'] = $data['wholesale_price'];
         if (isset($data['pieces_per_carton']) && !isset($data['units_per_pack']))
             $data['units_per_pack'] = $data['pieces_per_carton'];
+
+        // Calculate carton weight automatically
+        if (isset($data['piece_weight']) && isset($data['units_per_pack'])) {
+            $data['carton_weight'] = $data['piece_weight'] * $data['units_per_pack'];
+        }
 
         $product->update($data);
 

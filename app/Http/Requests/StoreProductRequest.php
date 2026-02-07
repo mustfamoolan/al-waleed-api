@@ -28,6 +28,9 @@ class StoreProductRequest extends FormRequest
             'pack_unit_id' => 'required_if:has_pack,true|nullable|exists:units,id',
             'units_per_pack' => 'nullable|numeric|min:1',
             'pieces_per_carton' => 'nullable|numeric|min:1', // Alias
+            'piece_weight' => 'nullable|numeric|min:0',
+            'weight_unit' => 'nullable|string|max:20',
+            'carton_weight' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ];
     }
