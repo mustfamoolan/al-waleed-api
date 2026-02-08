@@ -11,8 +11,10 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('purchase_invoice_lines', function (Blueprint $table) {
-            $table->decimal('sale_price_retail', 15, 2)->default(0)->after('price_after_cost');
-            $table->decimal('sale_price_wholesale', 15, 2)->default(0)->after('sale_price_retail');
+            $table->decimal('cost_per_unit', 15, 2)->default(0);
+            $table->decimal('price_after_cost', 15, 2)->default(0);
+            $table->decimal('sale_price_retail', 15, 2)->default(0);
+            $table->decimal('sale_price_wholesale', 15, 2)->default(0);
         });
     }
 
@@ -22,7 +24,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('purchase_invoice_lines', function (Blueprint $table) {
-            $table->dropColumn(['sale_price_retail', 'sale_price_wholesale']);
+            $table->dropColumn(['cost_per_unit', 'price_after_cost', 'sale_price_retail', 'sale_price_wholesale']);
         });
     }
 };
