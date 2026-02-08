@@ -119,6 +119,8 @@ class PurchaseInvoiceController extends Controller
                     'line_total_iqd' => $lineTotalIqd,
                     'cost_per_unit' => $costPerUnit,
                     'price_after_cost' => $priceAfterCost,
+                    'sale_price_retail' => $lineData['sale_price_retail'] ?? 0,
+                    'sale_price_wholesale' => $lineData['sale_price_wholesale'] ?? 0,
                     'is_free' => $isFree,
                 ]);
             }
@@ -197,6 +199,8 @@ class PurchaseInvoiceController extends Controller
                     'line_total_iqd' => $lineTotalIqd,
                     'cost_per_unit' => $costPerUnit,
                     'price_after_cost' => $priceAfterCost,
+                    'sale_price_retail' => $lineData['sale_price_retail'] ?? 0,
+                    'sale_price_wholesale' => $lineData['sale_price_wholesale'] ?? 0,
                     'is_free' => $isFree,
                 ]);
             }

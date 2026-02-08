@@ -65,6 +65,17 @@ class PurchaseInvoiceObserver
                         $balance->avg_cost_iqd = $totalQty > 0 ? $totalValue / $totalQty : $newCost;
                     }
                     $balance->save();
+
+                    // 1.1 Update Product Master Data (Selling Prices & Packing)
+                    $product = $line->product;
+                    if ($product) {
+                        $product->update([
+                            'sale_price_retail' => $line->sale_price_retail,
+                            'sale_price_wholesale' => $line->sale_price_wholesale,
+                            'units_per_pack' => $line->unit_factor, // Update packing based on invoice
+                            'purchase_price' => $line->price_foreign, // Latest purchase price
+                        ]);
+                    }
                 }
 
                 // 2. Create Journal Entry

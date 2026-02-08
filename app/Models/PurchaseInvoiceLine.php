@@ -20,6 +20,8 @@ class PurchaseInvoiceLine extends Model
         'line_total_iqd',
         'cost_per_unit',
         'price_after_cost',
+        'sale_price_retail',
+        'sale_price_wholesale',
         'is_free',
         'notes',
     ];
