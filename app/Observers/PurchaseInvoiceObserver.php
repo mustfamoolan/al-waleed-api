@@ -20,7 +20,7 @@ class PurchaseInvoiceObserver
                 $transaction = InventoryTransaction::create([
                     'trans_date' => $invoice->invoice_date,
                     'trans_type' => 'purchase',
-                    'warehouse_id' => $invoice->warehouse_id ?? 1, // Use invoice warehouse or default
+                    'warehouse_id' => $invoice->warehouse_id ?? 1,
                     'reference_type' => 'purchase_invoice',
                     'reference_id' => $invoice->id,
                     'created_by' => auth()->id(),
@@ -29,9 +29,8 @@ class PurchaseInvoiceObserver
 
                 foreach ($invoice->lines as $line) {
                     $baseQty = $line->qty * $line->unit_factor;
-                    $costIqd = $line->is_free ? 0 : ($line->line_total_iqd / ($baseQty ?: 1)); // Cost per base unit
+                    $costIqd = $line->is_free ? 0 : ($line->line_total_iqd / ($baseQty ?: 1));
 
-                    // Create Transaction Line
                     InventoryTransactionLine::create([
                         'inventory_transaction_id' => $transaction->id,
                         'product_id' => $line->product_id,
@@ -41,7 +40,6 @@ class PurchaseInvoiceObserver
                         'cost_iqd' => $costIqd,
                     ]);
 
-                    // Update Inventory Balance (Weighted Average)
                     $balance = InventoryBalance::firstOrNew([
                         'warehouse_id' => $invoice->warehouse_id ?? 1,
                         'product_id' => $line->product_id
@@ -53,7 +51,6 @@ class PurchaseInvoiceObserver
                     $newCost = $costIqd;
 
                     if ($line->is_free) {
-                        // Free items increase Qty but don't add value -> reduced avg cost
                         $totalValue = ($oldQty * $oldCost);
                         $totalQty = $oldQty + $newQty;
                         $balance->qty_on_hand = $totalQty;
@@ -66,14 +63,14 @@ class PurchaseInvoiceObserver
                     }
                     $balance->save();
 
-                    // 1.1 Update Product Master Data (Selling Prices & Packing)
+                    // Update Product Master Data
                     $product = $line->product;
                     if ($product) {
                         $product->update([
                             'sale_price_retail' => $line->sale_price_retail,
                             'sale_price_wholesale' => $line->sale_price_wholesale,
-                            'units_per_pack' => $line->unit_factor, // Update packing based on invoice
-                            'purchase_price' => $line->price_foreign, // Latest purchase price
+                            'units_per_pack' => $line->unit_factor,
+                            'purchase_price' => $line->price_foreign,
                         ]);
                     }
                 }
@@ -88,7 +85,6 @@ class PurchaseInvoiceObserver
                     'created_by' => auth()->id(),
                 ]);
 
-                // Debit: Inventory (1301)
                 $inventoryAccount = \App\Models\Account::where('account_code', '1301')->first();
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
@@ -97,28 +93,21 @@ class PurchaseInvoiceObserver
                     'credit_amount' => 0,
                 ]);
 
-                // Credit: Supplier AP (2101)
-                $supplierAccount = \App\Models\Account::where('account_code', '2101')->first(); // Or supplier->account_id
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
-                    'account_id' => $invoice->supplier->account_id ?? $supplierAccount->id,
+                    'account_id' => $invoice->supplier->account_id ?? 0,
                     'debit_amount' => 0,
                     'credit_amount' => $invoice->total_iqd,
                 ]);
 
-                // If Paid, create Payment Entry (optional: can be separate, but handled here as requested)
                 if ($invoice->paid_iqd > 0) {
-                    // Logic for payment entry... ideally separate but implied 2nd entry or combined
-                    // Simplified: Just reducing AP and crediting Cash
                     $cashAccount = \App\Models\Account::where('account_code', '1101')->first();
-
                     JournalEntryLine::create([
                         'journal_entry_id' => $journal->id,
-                        'account_id' => $invoice->supplier->account_id ?? $supplierAccount->id,
+                        'account_id' => $invoice->supplier->account_id ?? 0,
                         'debit_amount' => $invoice->paid_iqd,
                         'credit_amount' => 0,
                     ]);
-
                     JournalEntryLine::create([
                         'journal_entry_id' => $journal->id,
                         'account_id' => $cashAccount->id,
