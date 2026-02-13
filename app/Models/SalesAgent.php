@@ -15,9 +15,15 @@ class SalesAgent extends Model
         'salary',
         'commission_rate',
         'account_id',
+        'user_id',
         'is_active',
         'notes',
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 
     protected $casts = [
         'is_active' => 'boolean',

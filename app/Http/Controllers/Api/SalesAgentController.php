@@ -24,14 +24,28 @@ class SalesAgentController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'salary' => 'required|numeric|min:0',
+            'phone' => 'nullable|string|max:20',
+            'salary' => 'nullable|numeric|min:0',
             'commission_rate' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string',
+            'password' => 'nullable|string|min:6',
             'is_active' => 'boolean',
         ]);
 
         $validated['is_active'] = $validated['is_active'] ?? true;
+        $validated['salary'] = $validated['salary'] ?? 0;
+
+        // Create User if password is provided
+        if ($request->has('password') && !empty($request->password)) {
+            $user = \App\Models\User::create([
+                'name' => $request->name,
+                'phone' => $request->phone,
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'role' => 'agent',
+                'status' => 'active',
+            ]);
+            $validated['user_id'] = $user->id;
+        }
 
         $agent = SalesAgent::create($validated);
 
