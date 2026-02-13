@@ -26,9 +26,25 @@ class StaffController extends Controller
             'staff_type' => 'required|in:employee,agent,driver,picker,manager',
             'salary_monthly' => 'numeric|min:0',
             'notes' => 'nullable|string',
+            'password' => 'nullable|string|min:6', // Add password validation
+            'phone' => 'nullable|string', // Add phone validation if creating user
         ]);
 
-        $staff = Staff::create($request->all());
+        $data = $request->all();
+
+        // Create User if password is provided (mainly for Drivers/Pickers)
+        if ($request->has('password') && !empty($request->password)) {
+            $user = \App\Models\User::create([
+                'name' => $request->name ?? 'Staff User',
+                'phone' => $request->phone,
+                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                'role' => 'staff', // Default role
+                'status' => 'active',
+            ]);
+            $data['user_id'] = $user->id;
+        }
+
+        $staff = Staff::create($data);
 
         return response()->json(['message' => 'Staff created', 'staff' => $staff], 201);
     }
