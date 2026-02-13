@@ -11,6 +11,8 @@ class Staff extends Model
 
     protected $fillable = [
         'user_id',
+        'name',
+        'phone',
         'staff_type', // employee, agent, driver, picker
         'salary_monthly',
         'is_active',
