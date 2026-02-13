@@ -23,7 +23,7 @@ class StaffController extends Controller
     {
         $request->validate([
             'user_id' => 'nullable|exists:users,id',
-            'staff_type' => 'required|in:employee,agent,driver,picker,manager',
+            'staff_type' => 'required|in:employee,agent,driver,picker,manager,supervisor',
             'salary_monthly' => 'numeric|min:0',
             'notes' => 'nullable|string',
             'password' => 'nullable|string|min:6', // Add password validation
@@ -38,7 +38,7 @@ class StaffController extends Controller
                 'name' => $request->name ?? 'Staff User',
                 'phone' => $request->phone,
                 'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-                'role' => 'staff', // Default role
+                'role' => $request->staff_type ?? 'staff', // Use staff_type as role
                 'status' => 'active',
             ]);
             $data['user_id'] = $user->id;
@@ -57,7 +57,7 @@ class StaffController extends Controller
     public function update(Request $request, Staff $staff)
     {
         $request->validate([
-            'staff_type' => 'sometimes|in:employee,agent,driver,picker,manager',
+            'staff_type' => 'sometimes|in:employee,agent,driver,picker,manager,supervisor',
             'salary_monthly' => 'numeric|min:0',
             'is_active' => 'boolean'
         ]);
