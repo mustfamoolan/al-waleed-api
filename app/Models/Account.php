@@ -60,4 +60,9 @@ class Account extends Model
     {
         return $query->whereNull('parent_id');
     }
+
+    public function journalEntryLines()
+    {
+        return $this->hasMany(JournalEntryLine::class);
+    }
 }
