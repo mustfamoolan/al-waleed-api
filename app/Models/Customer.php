@@ -18,6 +18,9 @@ class Customer extends Model
         'account_id',
         'agent_id',
         'is_active',
+        'total_debt',
+        'total_paid',
+        'last_payment_date',
     ];
 
     protected $casts = [
