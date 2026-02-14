@@ -21,6 +21,8 @@ class SalesInvoiceLine extends Model
         'notes',
     ];
 
+    protected $appends = ['product_name', 'unit_name'];
+
     public function product()
     {
         return $this->belongsTo(Product::class);
@@ -29,5 +31,16 @@ class SalesInvoiceLine extends Model
     public function unit()
     {
         return $this->belongsTo(Unit::class);
+    }
+
+    // Accessors to include product_name and unit_name in JSON
+    public function getProductNameAttribute()
+    {
+        return $this->product?->name_ar ?? '';
+    }
+
+    public function getUnitNameAttribute()
+    {
+        return $this->unit?->name_ar ?? '';
     }
 }
