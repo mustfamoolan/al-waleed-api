@@ -34,6 +34,7 @@ class SalesAgentController extends Controller
 
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['salary'] = $validated['salary'] ?? 0;
+        $validated['commission_rate'] = $validated['commission_rate'] ?? 0;
 
         // Handle User link if password is provided or if phone already exists in users table
         if (($request->has('password') && !empty($request->password)) || !empty($request->phone)) {
