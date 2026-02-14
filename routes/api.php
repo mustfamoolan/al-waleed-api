@@ -104,6 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('sales-invoices/{invoice}/assign-driver', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'assignDriver']);
     Route::post('sales-invoices/{invoice}/out-for-delivery', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'outForDelivery']);
     Route::post('sales-invoices/{invoice}/mark-delivered', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'markDelivered']);
+    Route::post('sales-invoices/{invoice}/cancel', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'cancel']);
 
     Route::post('sales-returns', [\App\Http\Controllers\Api\SalesReturnController::class, 'store']);
     Route::post('sales-returns/{return}/post', [\App\Http\Controllers\Api\SalesReturnController::class, 'post']);

@@ -84,7 +84,7 @@ class SalesInvoiceController extends Controller
 
     public function approve(SalesInvoice $invoice)
     {
-        if ($invoice->status !== 'pending_approval')
+        if (!in_array($invoice->status, ['draft', 'pending_approval']))
             abort(400, 'Invalid status');
         $invoice->update([
             'status' => 'approved',
@@ -104,7 +104,7 @@ class SalesInvoiceController extends Controller
 
     public function markPrepared(SalesInvoice $invoice)
     {
-        if ($invoice->status !== 'preparing')
+        if (!in_array($invoice->status, ['approved', 'preparing']))
             abort(400, 'Invalid status');
         $invoice->update([
             'status' => 'prepared',
@@ -135,7 +135,7 @@ class SalesInvoiceController extends Controller
 
     public function markDelivered(Request $request, SalesInvoice $invoice)
     {
-        if ($invoice->status !== 'out_for_delivery')
+        if (!in_array($invoice->status, ['prepared', 'assigned_to_driver', 'out_for_delivery']))
             abort(400, 'Invalid status');
         $invoice->update([
             'status' => 'delivered',
@@ -144,5 +144,14 @@ class SalesInvoiceController extends Controller
         ]);
         // Observer handles Journal Entry
         return response()->json(['message' => 'Delivered and Financials recorded']);
+    }
+
+    public function cancel(SalesInvoice $invoice)
+    {
+        if (in_array($invoice->status, ['delivered', 'canceled', 'returned']))
+            abort(400, 'Cannot cancel in this status');
+
+        $invoice->update(['status' => 'canceled']);
+        return response()->json(['message' => 'Invoice canceled']);
     }
 }
