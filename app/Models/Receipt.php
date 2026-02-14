@@ -13,6 +13,7 @@ class Receipt extends Model
         'receipt_no',
         'party_id',
         'customer_id',
+        'agent_id',
         'receipt_type',
         'amount_iqd',
         'status',
@@ -24,6 +25,11 @@ class Receipt extends Model
     public function customer()
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function agent()
+    {
+        return $this->belongsTo(SalesAgent::class);
     }
 
     public function allocations()

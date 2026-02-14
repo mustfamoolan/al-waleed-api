@@ -45,4 +45,14 @@ class SalesAgent extends Model
     {
         return $this->hasMany(SalesInvoice::class, 'agent_id');
     }
+
+    public function customers()
+    {
+        return $this->hasMany(Customer::class, 'agent_id');
+    }
+
+    public function receipts()
+    {
+        return $this->hasMany(Receipt::class, 'agent_id');
+    }
 }

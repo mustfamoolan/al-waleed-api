@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sales Agents
     Route::apiResource('sales-agents', \App\Http\Controllers\Api\SalesAgentController::class);
     Route::post('sales-agents/{salesAgent}/calculate-commission', [\App\Http\Controllers\Api\SalesAgentController::class, 'calculateCommission']);
+    Route::get('sales-agents/{agent}/dashboard', [\App\Http\Controllers\Api\SalesAgentDashboardController::class, 'show']);
 
     // Agent Targets
     Route::apiResource('agent-targets', \App\Http\Controllers\Api\AgentTargetController::class);

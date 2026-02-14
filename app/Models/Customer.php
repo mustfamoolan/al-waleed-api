@@ -16,6 +16,7 @@ class Customer extends Model
         'sales_type',
         'credit_limit',
         'account_id',
+        'agent_id',
         'is_active',
     ];
 
@@ -27,6 +28,11 @@ class Customer extends Model
     public function account()
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function agent()
+    {
+        return $this->belongsTo(SalesAgent::class);
     }
 
     public function addresses()
