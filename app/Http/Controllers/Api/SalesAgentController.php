@@ -35,16 +35,33 @@ class SalesAgentController extends Controller
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['salary'] = $validated['salary'] ?? 0;
 
-        // Create User if password is provided
-        if ($request->has('password') && !empty($request->password)) {
-            $user = \App\Models\User::create([
-                'name' => $request->name,
-                'phone' => $request->phone,
-                'password' => \Illuminate\Support\Facades\Hash::make($request->password),
-                'role' => 'agent',
-                'status' => 'active',
-            ]);
-            $validated['user_id'] = $user->id;
+        // Handle User link if password is provided or if phone already exists in users table
+        if (($request->has('password') && !empty($request->password)) || !empty($request->phone)) {
+            $user = \App\Models\User::where('phone', $request->phone)->first();
+
+            if (!$user && !empty($request->password)) {
+                // Create new user if not exists and password provided
+                $user = \App\Models\User::create([
+                    'name' => $request->name,
+                    'phone' => $request->phone,
+                    'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                    'role' => 'agent',
+                    'status' => 'active',
+                ]);
+            } elseif ($user) {
+                // If user exists, optionally update password if provided
+                if (!empty($request->password)) {
+                    $user->update(['password' => \Illuminate\Support\Facades\Hash::make($request->password)]);
+                }
+                // Ensure role is agent if we are linking
+                if ($user->role !== 'agent') {
+                    $user->update(['role' => 'agent']);
+                }
+            }
+
+            if ($user) {
+                $validated['user_id'] = $user->id;
+            }
         }
 
         $agent = SalesAgent::create($validated);
