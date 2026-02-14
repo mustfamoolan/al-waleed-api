@@ -118,6 +118,61 @@ class ReportController extends Controller
         return response()->json($this->reportService->getCustomerProfit($request->customer_id, $request->date_from, $request->date_to));
     }
 
+    public function customerAnalytics(Request $request)
+    {
+        $request->validate(['customer_id' => 'required|exists:customers,id']);
+
+        $customerId = $request->customer_id;
+
+        // 1. Get all delivered invoices for this customer
+        $invoices = SalesInvoice::where('customer_id', $customerId)
+            ->where('status', 'delivered')
+            ->with('lines.product')
+            ->get();
+
+        $totalPurchases = $invoices->sum('total_iqd');
+        $totalPaid = $invoices->sum('paid_iqd');
+        $totalRemaining = $invoices->sum('remaining_iqd');
+
+        // 2. Calculate total profit
+        $totalProfit = 0;
+        foreach ($invoices as $invoice) {
+            foreach ($invoice->lines as $line) {
+                $baseQty = $line->qty * $line->unit_factor;
+                $totalProfit += ($line->line_total_iqd - ($line->cost_iqd_snapshot * $baseQty));
+            }
+        }
+
+        // 3. Get top products by revenue
+        $productStats = DB::table('sales_invoice_lines as sil')
+            ->join('sales_invoices as si', 'sil.sales_invoice_id', '=', 'si.id')
+            ->join('products as p', 'sil.product_id', '=', 'p.id')
+            ->where('si.customer_id', $customerId)
+            ->where('si.status', 'delivered')
+            ->select(
+                'p.id as product_id',
+                'p.name as product_name',
+                DB::raw('SUM(sil.qty * sil.unit_factor) as total_qty'),
+                DB::raw('SUM(sil.line_total_iqd) as total_revenue'),
+                DB::raw('SUM(sil.line_total_iqd - (sil.cost_iqd_snapshot * sil.qty * sil.unit_factor)) as total_profit'),
+                DB::raw('COUNT(DISTINCT si.id) as invoice_count')
+            )
+            ->groupBy('p.id', 'p.name')
+            ->orderByDesc('total_revenue')
+            ->limit(10)
+            ->get();
+
+        return response()->json([
+            'customer_id' => $customerId,
+            'total_purchases' => $totalPurchases,
+            'total_paid' => $totalPaid,
+            'total_remaining' => $totalRemaining,
+            'total_profit' => $totalProfit,
+            'invoice_count' => $invoices->count(),
+            'top_products' => $productStats
+        ]);
+    }
+
     public function topProfitProducts(Request $request)
     {
         return response()->json($this->reportService->getProfitRankProducts($request->date_from, $request->date_to, 'desc', $request->limit ?? 10));

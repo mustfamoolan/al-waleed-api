@@ -160,6 +160,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Additional Reports
     Route::get('reports/customer-profit', [\App\Http\Controllers\Api\ReportController::class, 'customerProfit']);
+    Route::get('reports/customer-analytics', [\App\Http\Controllers\Api\ReportController::class, 'customerAnalytics']);
     Route::get('reports/top-profit-products', [\App\Http\Controllers\Api\ReportController::class, 'topProfitProducts']);
     Route::get('reports/low-profit-products', [\App\Http\Controllers\Api\ReportController::class, 'lowProfitProducts']);
     Route::get('reports/inventory-balances', [\App\Http\Controllers\Api\ReportController::class, 'inventoryBalances']);
