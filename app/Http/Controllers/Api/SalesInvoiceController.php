@@ -14,12 +14,12 @@ class SalesInvoiceController extends Controller
 
     public function index()
     {
-        return response()->json(SalesInvoice::with('party', 'customer', 'agent', 'creator', 'lines')->get());
+        return response()->json(SalesInvoice::with('party', 'customer', 'agent', 'creator', 'lines.product', 'lines.unit')->get());
     }
 
     public function show(SalesInvoice $invoice)
     {
-        return response()->json($invoice->load('party', 'customer', 'agent', 'creator', 'lines'));
+        return response()->json($invoice->load('party', 'customer', 'agent', 'creator', 'lines.product', 'lines.unit'));
     }
 
     public function store(Request $request)
@@ -35,6 +35,15 @@ class SalesInvoiceController extends Controller
             $discountIqd = $request->discount_iqd ?? 0;
             $totalIqd = $subtotalIqd - $discountIqd;
 
+            // Handle payment logic based on payment_type
+            $paidIqd = 0;
+            if ($request->payment_type === 'cash') {
+                $paidIqd = $totalIqd;
+            } else {
+                $paidIqd = $request->paid_iqd ?? 0;
+            }
+            $remainingIqd = $totalIqd - $paidIqd;
+
             $invoice = SalesInvoice::create([
                 'invoice_no' => 'SI-' . time(),
                 'source_type' => $request->source_type ?? 'office',
@@ -49,6 +58,8 @@ class SalesInvoiceController extends Controller
                 'subtotal_iqd' => $subtotalIqd,
                 'discount_iqd' => $discountIqd,
                 'total_iqd' => $totalIqd,
+                'paid_iqd' => $paidIqd,
+                'remaining_iqd' => $remainingIqd,
                 'status' => 'draft',
                 'created_by' => auth()->id(),
             ]);
@@ -62,6 +73,7 @@ class SalesInvoiceController extends Controller
                     'unit_factor' => $line['unit_factor'] ?? 1,
                     'price_iqd' => $line['price_iqd'],
                     'line_total_iqd' => $line['qty'] * $line['price_iqd'],
+                    'cost_iqd_snapshot' => $line['cost_iqd_snapshot'] ?? 0,
                 ]);
             }
             return $invoice;
@@ -69,7 +81,7 @@ class SalesInvoiceController extends Controller
 
         // Auto submit/approve logic check could go here if source_type == office
 
-        return response()->json(['message' => 'Invoice created', 'invoice' => $invoice->load('lines')], 201);
+        return response()->json(['message' => 'Invoice created', 'invoice' => $invoice->load('lines.product', 'lines.unit')], 201);
     }
 
     // Workflow Actions
