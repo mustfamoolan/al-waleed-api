@@ -109,6 +109,55 @@ class ReportService
         ];
     }
 
+    // C. Supplier Analytics (New)
+    public function getSupplierAnalytics($supplierId, $from = null, $to = null)
+    {
+        // 1. Top/Low Purchased Products (from this supplier)
+        $productsQuery = DB::table('purchase_invoice_lines')
+            ->join('purchase_invoices', 'purchase_invoices.id', '=', 'purchase_invoice_lines.purchase_invoice_id')
+            ->join('products', 'products.id', '=', 'purchase_invoice_lines.product_id')
+            ->where('purchase_invoices.supplier_id', $supplierId)
+            ->where('purchase_invoices.status', 'posted')
+            ->when($from, fn($q) => $q->whereDate('purchase_invoices.created_at', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('purchase_invoices.created_at', '<=', $to))
+            ->select(
+                'products.name',
+                DB::raw('SUM(purchase_invoice_lines.qty) as total_qty'),
+                DB::raw('SUM(purchase_invoice_lines.line_total_iqd) as total_amount')
+            )
+            ->groupBy('products.name', 'products.id');
+
+        $topProducts = (clone $productsQuery)->orderByDesc('total_qty')->limit(5)->get();
+        $lowProducts = (clone $productsQuery)->orderBy('total_qty')->limit(5)->get();
+
+        // 2. Sales & Profit from products LINKED to this supplier
+        // Optimization: Find product IDs purchased from this supplier first
+        $productIds = DB::table('purchase_invoices')
+            ->join('purchase_invoice_lines', 'purchase_invoices.id', '=', 'purchase_invoice_lines.purchase_invoice_id')
+            ->where('purchase_invoices.supplier_id', $supplierId)
+            ->distinct()
+            ->pluck('purchase_invoice_lines.product_id');
+
+        $salesStats = DB::table('sales_invoice_lines')
+            ->join('sales_invoices', 'sales_invoices.id', '=', 'sales_invoice_lines.sales_invoice_id')
+            ->whereIn('sales_invoice_lines.product_id', $productIds)
+            ->where('sales_invoices.status', 'delivered')
+            ->when($from, fn($q) => $q->whereDate('sales_invoices.created_at', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('sales_invoices.created_at', '<=', $to))
+            ->select(
+                DB::raw('SUM(sales_invoice_lines.line_total_iqd) as revenue'),
+                DB::raw('SUM(sales_invoice_lines.line_total_iqd - (sales_invoice_lines.qty * sales_invoice_lines.cost_iqd_snapshot)) as profit')
+            )
+            ->first();
+
+        return [
+            'top_products' => $topProducts,
+            'low_products' => $lowProducts,
+            'generated_revenue' => $salesStats->revenue ?? 0,
+            'generated_profit' => $salesStats->profit ?? 0
+        ];
+    }
+
     // F. Profit Summary
     public function getProfitSummary($from = null, $to = null)
     {
