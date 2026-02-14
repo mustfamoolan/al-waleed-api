@@ -10,11 +10,11 @@ class PartyController extends Controller
 {
     public function index()
     {
-        return response()->json(Party::with('customer', 'staff.user')->get());
+        return response()->json(Party::with('customer', 'staff.user', 'agent')->get());
     }
 
     public function show(Party $party)
     {
-        return response()->json($party->load('customer', 'staff.user'));
+        return response()->json($party->load('customer', 'staff.user', 'agent'));
     }
 }

@@ -15,6 +15,7 @@ class Party extends Model
         'phone',
         'customer_id',
         'staff_id',
+        'agent_id',
     ];
 
     public function customer()
@@ -25,5 +26,10 @@ class Party extends Model
     public function staff()
     {
         return $this->belongsTo(Staff::class);
+    }
+
+    public function agent()
+    {
+        return $this->belongsTo(SalesAgent::class, 'agent_id');
     }
 }

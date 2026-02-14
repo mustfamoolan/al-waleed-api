@@ -14,12 +14,12 @@ class SalesInvoiceController extends Controller
 
     public function index()
     {
-        return response()->json(SalesInvoice::with('customer', 'agent', 'creator', 'lines')->get());
+        return response()->json(SalesInvoice::with('party', 'customer', 'agent', 'creator', 'lines')->get());
     }
 
     public function show(SalesInvoice $invoice)
     {
-        return response()->json($invoice->load('customer', 'agent', 'creator', 'lines'));
+        return response()->json($invoice->load('party', 'customer', 'agent', 'creator', 'lines'));
     }
 
     public function store(Request $request)
