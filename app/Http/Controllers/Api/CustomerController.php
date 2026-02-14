@@ -25,6 +25,7 @@ class CustomerController extends Controller
             'sales_type' => 'required|in:cash,credit',
             'credit_limit' => 'numeric|min:0',
             'account_id' => 'nullable|exists:accounts,id',
+            'agent_id' => 'nullable|exists:sales_agents,id',
             'is_active' => 'boolean',
         ]);
 
@@ -54,6 +55,7 @@ class CustomerController extends Controller
             'sales_type' => 'sometimes|required|in:cash,credit',
             'credit_limit' => 'numeric|min:0',
             'account_id' => 'nullable|exists:accounts,id',
+            'agent_id' => 'nullable|exists:sales_agents,id',
             'is_active' => 'boolean',
         ]);
 
