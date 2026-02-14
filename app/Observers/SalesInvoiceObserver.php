@@ -80,43 +80,50 @@ class SalesInvoiceObserver
                     'created_by' => auth()->id(),
                 ]);
 
-                // Determine Debit Account (Cash or AR)
-                // If PaymentType = Cash -> Cash Account (1101)
-                // If PaymentType = Credit -> Customer AR Account (1201 or Specific)
+                // Get Required Accounts
+                $cashAccount = Account::where('account_code', '1101')->first(); // Cash
+                $defaultARAccount = Account::where('account_code', '1201')->first(); // Trade Receivables
+                $revenueAccount = Account::where('account_code', '4101')->first(); // Sales Revenue
 
-                $debitAccountId = null;
-
-                if ($invoice->payment_type === 'cash') {
-                    $cashAccount = Account::where('account_code', '1101')->first();
-                    $debitAccountId = $cashAccount->id;
+                // Determine Customer's AR Account (prefer specific customer account if exists)
+                $customerAccount = null;
+                if ($invoice->customer_id && $invoice->customer && $invoice->customer->account_id) {
+                    $customerAccount = Account::find($invoice->customer->account_id);
                 } else {
-                    // Credit
-                    $customerAccount = Account::where('account_code', '1201')->first();
-                    // Prefer customer->account_id if exists
-                    if ($invoice->customer_id && $invoice->customer && $invoice->customer->account_id) {
-                        $debitAccountId = $invoice->customer->account_id;
-                    } else {
-                        $debitAccountId = $customerAccount->id;
-                    }
+                    $customerAccount = $defaultARAccount;
                 }
 
-                // Credit Account: Sales Revenue (4101)
-                $revenueAccount = Account::where('account_code', '4101')->first();
+                // Revenue Entry - Split between Cash and AR based on paid/remaining amounts
 
-                // Debit Entry
+                // 1. If there's a paid amount, record it in Cash
+                if ($invoice->paid_iqd > 0) {
+                    JournalEntryLine::create([
+                        'journal_entry_id' => $journal->id,
+                        'account_id' => $cashAccount->id, // 1101 - Cash
+                        'debit_amount' => $invoice->paid_iqd,
+                        'credit_amount' => 0,
+                        'description' => 'Paid amount',
+                    ]);
+                }
+
+                // 2. If there's a remaining amount, record it in Accounts Receivable
+                if ($invoice->remaining_iqd > 0) {
+                    JournalEntryLine::create([
+                        'journal_entry_id' => $journal->id,
+                        'account_id' => $customerAccount->id, // 1201 - AR
+                        'debit_amount' => $invoice->remaining_iqd,
+                        'credit_amount' => 0,
+                        'description' => 'Remaining balance',
+                    ]);
+                }
+
+                // 3. Credit side (Revenue) - always the full amount
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
-                    'account_id' => $debitAccountId,
-                    'debit_amount' => $invoice->total_iqd,
-                    'credit_amount' => 0,
-                ]);
-
-                // Credit Entry
-                JournalEntryLine::create([
-                    'journal_entry_id' => $journal->id,
-                    'account_id' => $revenueAccount->id,
+                    'account_id' => $revenueAccount->id, // 4101 - Sales Revenue
                     'debit_amount' => 0,
                     'credit_amount' => $invoice->total_iqd,
+                    'description' => 'Sales revenue',
                 ]);
 
                 // OPTIONAL: COGS Entry (Cost of Goods Sold)
