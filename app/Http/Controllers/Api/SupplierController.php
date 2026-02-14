@@ -59,6 +59,17 @@ class SupplierController extends Controller
 
     public function destroy(Supplier $supplier)
     {
+        // Check for transactions
+        $hasInvoices = \App\Models\PurchaseInvoice::where('supplier_id', $supplier->id)->exists();
+        $hasPayments = \App\Models\Payment::where('supplier_id', $supplier->id)->exists();
+
+        if ($hasInvoices || $hasPayments) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'لا يمكن حذف المورد لوجود حركات مالية مرتبطة به. يفضل تعطيل المورد بدلاً من حذفه.'
+            ], 400);
+        }
+
         $supplier->delete();
         return response()->json([
             'status' => 'success',
