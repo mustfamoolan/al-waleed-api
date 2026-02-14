@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use App\Http\Resources\RepresentativeResource;
+use App\Http\Resources\CustomerAddressResource;
 
 class CustomerResource extends JsonResource
 {
@@ -20,6 +21,7 @@ class CustomerResource extends JsonResource
             'customer_name' => $this->name,
             'phone_number' => $this->phone,
             'address' => $this->address,
+            'addresses' => CustomerAddressResource::collection($this->whenLoaded('addresses')), // Added addresses
             'agent_id' => $this->agent_id,
             'total_debt' => (float) $this->total_debt,
             'total_paid' => (float) $this->total_paid,
