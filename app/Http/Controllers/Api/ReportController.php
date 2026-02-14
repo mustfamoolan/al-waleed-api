@@ -39,6 +39,14 @@ class ReportController extends Controller
         );
     }
 
+    public function supplierPurchases(Request $request)
+    {
+        $request->validate(['supplier_id' => 'required|exists:suppliers,id']);
+        return response()->json(
+            $this->reportService->getSupplierPurchases($request->supplier_id, $request->date_from, $request->date_to)
+        );
+    }
+
     public function profitSummary(Request $request)
     {
         return response()->json(

@@ -158,6 +158,29 @@ class ReportService
         ];
     }
 
+    // D. Supplier Detailed Purchases (Products purchased from this supplier)
+    public function getSupplierPurchases($supplierId, $from = null, $to = null)
+    {
+        return DB::table('purchase_invoice_lines')
+            ->join('purchase_invoices', 'purchase_invoices.id', '=', 'purchase_invoice_lines.purchase_invoice_id')
+            ->join('products', 'products.id', '=', 'purchase_invoice_lines.product_id')
+            ->where('purchase_invoices.supplier_id', $supplierId)
+            ->where('purchase_invoices.status', 'posted')
+            ->when($from, fn($q) => $q->whereDate('purchase_invoices.invoice_date', '>=', $from))
+            ->when($to, fn($q) => $q->whereDate('purchase_invoices.invoice_date', '<=', $to))
+            ->select(
+                'purchase_invoices.invoice_date as date',
+                'purchase_invoices.invoice_no as ref',
+                'products.name as product_name',
+                'purchase_invoice_lines.qty',
+                'purchase_invoice_lines.price_foreign as price',
+                'purchase_invoice_lines.line_total_iqd as total'
+            )
+            ->orderByDesc('purchase_invoices.invoice_date')
+            ->orderByDesc('purchase_invoices.id')
+            ->get();
+    }
+
     // F. Profit Summary
     public function getProfitSummary($from = null, $to = null)
     {
