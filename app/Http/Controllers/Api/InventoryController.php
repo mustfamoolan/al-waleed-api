@@ -139,7 +139,7 @@ class InventoryController extends Controller
                     'inventory_transaction_id' => $trans->id,
                     'product_id' => $item['product_id'],
                     'qty' => $diff,
-                    'unit_id' => DB::table('products')->where('id', $item['product_id'])->value('unit_id'), // Default unit
+                    'unit_id' => DB::table('products')->where('id', $item['product_id'])->value('base_unit_id'), // Default unit
                     'unit_factor' => 1,
                     'cost_iqd' => DB::table('inventory_balances')
                         ->where('product_id', $item['product_id'])
