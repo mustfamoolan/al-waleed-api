@@ -496,7 +496,8 @@ class ReportService
         $query = \App\Models\InventoryBalance::with([
             'product.category',
             'product.defaultSupplier.supplier',
-            'product.baseUnit'
+            'product.baseUnit',
+            'product.packUnit'
         ]);
         if ($warehouseId)
             $query->where('warehouse_id', $warehouseId);
