@@ -493,7 +493,11 @@ class ReportService
     // 14. Inventory Balances
     public function getInventoryBalances($warehouseId = null)
     {
-        $query = \App\Models\InventoryBalance::with('product');
+        $query = \App\Models\InventoryBalance::with([
+            'product.category',
+            'product.defaultSupplier.supplier',
+            'product.baseUnit'
+        ]);
         if ($warehouseId)
             $query->where('warehouse_id', $warehouseId);
         // Could filter by category via product relationship if needed
