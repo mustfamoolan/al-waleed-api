@@ -499,10 +499,11 @@ class ReportService
         // Could filter by category via product relationship if needed
         return $query->get()->map(function ($bal) {
             return [
-                'product' => $bal->product->name,
+                'product_id' => $bal->product_id,
                 'warehouse_id' => $bal->warehouse_id,
                 'qty_on_hand' => $bal->qty_on_hand,
-                // average_cost if tracked
+                'avg_cost_iqd' => $bal->avg_cost_iqd,
+                'product' => $bal->product, // Full product object
             ];
         });
     }

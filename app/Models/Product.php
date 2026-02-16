@@ -9,6 +9,13 @@ class Product extends Model
 {
     use HasFactory;
 
+    protected $appends = ['name_ar'];
+
+    public function getNameArAttribute()
+    {
+        return $this->name;
+    }
+
     protected $fillable = [
         'name',
         'sku',
