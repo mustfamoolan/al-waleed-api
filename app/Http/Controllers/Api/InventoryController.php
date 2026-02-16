@@ -106,4 +106,60 @@ class InventoryController extends Controller
 
         return response()->json(['message' => 'تم حفظ الرصيد الافتتاحي', 'transaction' => $transaction->load('lines')], 201);
     }
+    public function settle(Request $request)
+    {
+        $request->validate([
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'items' => 'required|array',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.physical_qty' => 'required|numeric',
+            'items.*.system_qty' => 'required|numeric',
+            'items.*.note' => 'nullable|string',
+        ]);
+
+        $transaction = DB::transaction(function () use ($request) {
+            $trans = InventoryTransaction::create([
+                'trans_date' => now(),
+                'trans_type' => 'adjustment',
+                'warehouse_id' => $request->warehouse_id,
+                'reference_type' => 'manual',
+                'reference_id' => 0,
+                'created_by' => auth()->id(),
+                'note' => $request->note ?? 'تسوية جرد دوري',
+            ]);
+
+            foreach ($request->items as $item) {
+                $diff = $item['physical_qty'] - $item['system_qty'];
+
+                if ($diff == 0)
+                    continue;
+
+                // Create Transaction Line for the difference
+                InventoryTransactionLine::create([
+                    'inventory_transaction_id' => $trans->id,
+                    'product_id' => $item['product_id'],
+                    'qty' => $diff,
+                    'unit_id' => DB::table('products')->where('id', $item['product_id'])->value('unit_id'), // Default unit
+                    'unit_factor' => 1,
+                    'cost_iqd' => DB::table('inventory_balances')
+                        ->where('product_id', $item['product_id'])
+                        ->where('warehouse_id', $request->warehouse_id)
+                        ->value('avg_cost_iqd') ?? 0,
+                    'note' => $item['note'] ?? 'فرق تسوية جرد',
+                ]);
+
+                // Update Balance
+                $balance = InventoryBalance::firstOrNew([
+                    'warehouse_id' => $request->warehouse_id,
+                    'product_id' => $item['product_id']
+                ]);
+                $balance->qty_on_hand = $item['physical_qty'];
+                $balance->save();
+            }
+
+            return $trans;
+        });
+
+        return response()->json(['message' => 'تم حفظ تسوية الجرد بنجاح', 'transaction' => $transaction->load('lines')], 201);
+    }
 }

@@ -262,23 +262,33 @@ class ReportService
     public function getProductMovement($productId, $warehouseId = null, $from = null, $to = null)
     {
         $query = InventoryTransaction::join('inventory_transaction_lines', 'inventory_transactions.id', '=', 'inventory_transaction_lines.inventory_transaction_id')
+            ->leftJoin('users', 'inventory_transactions.created_by', '=', 'users.id')
+            ->leftJoin('warehouses', 'inventory_transactions.warehouse_id', '=', 'warehouses.id')
             ->where('inventory_transaction_lines.product_id', $productId);
 
         if ($warehouseId)
             $query->where('inventory_transactions.warehouse_id', $warehouseId);
         if ($from)
-            $query->whereDate('inventory_transactions.transaction_date', '>=', $from);
+            $query->whereDate('inventory_transactions.trans_date', '>=', $from);
         if ($to)
-            $query->whereDate('inventory_transactions.transaction_date', '<=', $to);
+            $query->whereDate('inventory_transactions.trans_date', '<=', $to);
 
         return $query->select(
-            'inventory_transactions.transaction_date',
-            'inventory_transactions.transaction_type',
+            'inventory_transactions.id',
+            'inventory_transactions.trans_date as date',
+            'inventory_transactions.trans_type',
             'inventory_transactions.reference_type',
             'inventory_transactions.reference_id',
+            'inventory_transactions.note as header_note',
             'inventory_transaction_lines.qty',
-            'inventory_transaction_lines.note'
-        )->get();
+            'inventory_transaction_lines.unit_factor',
+            'inventory_transaction_lines.note as line_note',
+            'users.name as created_by_name',
+            'warehouses.name as warehouse_name'
+        )
+            ->orderBy('inventory_transactions.trans_date', 'asc')
+            ->orderBy('inventory_transactions.id', 'asc')
+            ->get();
     }
 
     // J. Agent Performance

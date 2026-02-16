@@ -58,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('inventory/balances', [\App\Http\Controllers\Api\InventoryController::class, 'balances']);
     Route::get('inventory/transactions', [\App\Http\Controllers\Api\InventoryController::class, 'transactions']);
     Route::post('inventory/opening-balance', [\App\Http\Controllers\Api\InventoryController::class, 'openingBalance']);
+    Route::post('inventory/settle', [\App\Http\Controllers\Api\InventoryController::class, 'settle']);
 
     // Purchases
     Route::apiResource('purchase-invoices', \App\Http\Controllers\Api\PurchaseInvoiceController::class);
