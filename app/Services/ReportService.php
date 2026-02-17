@@ -18,51 +18,81 @@ class ReportService
     // A. Customer Statement
     public function getCustomerStatement($customerId, $from = null, $to = null)
     {
-        // 1. Invoices
-        $invoices = SalesInvoice::where('customer_id', $customerId)
-            ->where('status', 'delivered') // confirmed sales
-            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
-            ->get()->map(function ($inv) {
-                return [
-                    'date' => $inv->created_at->format('Y-m-d'),
-                    'type' => 'invoice',
-                    'ref' => $inv->invoice_no,
-                    'debit' => $inv->total_iqd, // Receivable increases
-                    'credit' => 0,
-                    'notes' => 'Sales Invoice'
-                ];
-            });
+        // 1. Get the customer's account
+        $account = Account::where('reference_type', 'customer')
+            ->where('reference_id', $customerId)
+            ->first();
 
-        // 2. Receipts
-        $receipts = Receipt::where('customer_id', $customerId)
-            ->where('status', 'posted')
-            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
-            ->get()->map(function ($rec) {
-                return [
-                    'date' => $rec->created_at->format('Y-m-d'),
-                    'type' => 'receipt',
-                    'ref' => $rec->receipt_no,
-                    'debit' => 0,
-                    'credit' => $rec->amount_iqd, // Receivable decreases
-                    'notes' => 'Payment Received'
-                ];
-            });
+        if (!$account) {
+            return [
+                'transactions' => [],
+                'opening_balance' => 0,
+                'total_debit' => 0,
+                'total_credit' => 0,
+                'closing_balance' => 0
+            ];
+        }
 
-        // Merge & Sort
-        $transactions = $invoices->merge($receipts)->sortBy('date')->values();
+        // 2. Calculate Opening Balance (Balance before $from date)
+        $openingBalance = 0;
+        if ($from) {
+            $openingBalance = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
+                ->where('journal_entry_lines.account_id', $account->id)
+                ->where('journal_entries.status', 'posted')
+                ->whereDate('journal_entries.entry_date', '<', $from)
+                ->select(DB::raw('SUM(debit_amount - credit_amount) as balance'))
+                ->value('balance') ?? 0;
+        }
 
-        // Calculate Running Balance? (Simplified)
-        $totalDebit = $transactions->sum('debit');
-        $totalCredit = $transactions->sum('credit');
-        $balance = $totalDebit - $totalCredit;
+        // 3. Get Transactions within range
+        $query = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
+            ->where('journal_entry_lines.account_id', $account->id)
+            ->where('journal_entries.status', 'posted')
+            ->select(
+                'journal_entries.entry_date as date',
+                'journal_entries.reference_type as type',
+                'journal_entries.reference_id as ref_id',
+                'journal_entries.description as notes',
+                'journal_entry_lines.debit_amount as debit',
+                'journal_entry_lines.credit_amount as credit'
+            );
+
+        if ($from)
+            $query->whereDate('journal_entries.entry_date', '>=', $from);
+        if ($to)
+            $query->whereDate('journal_entries.entry_date', '<=', $to);
+
+        $transactions = $query->orderBy('journal_entries.entry_date', 'asc')
+            ->orderBy('journal_entries.id', 'asc')
+            ->get();
+
+        // 4. Transform and add running balance
+        $runningBalance = $openingBalance;
+        $totalDebit = 0;
+        $totalCredit = 0;
+
+        $formattedTransactions = $transactions->map(function ($txn) use (&$runningBalance, &$totalDebit, &$totalCredit) {
+            $runningBalance += ($txn->debit - $txn->credit);
+            $totalDebit += $txn->debit;
+            $totalCredit += $txn->credit;
+
+            return [
+                'date' => $txn->date,
+                'type' => $txn->type,
+                'ref' => $txn->ref_id,
+                'debit' => $txn->debit,
+                'credit' => $txn->credit,
+                'notes' => $txn->notes,
+                'running_balance' => $runningBalance
+            ];
+        });
 
         return [
-            'transactions' => $transactions,
-            'total_debit' => $totalDebit,
-            'total_credit' => $totalCredit,
-            'closing_balance' => $balance
+            'opening_balance' => (float) $openingBalance,
+            'transactions' => $formattedTransactions,
+            'total_debit' => (float) $totalDebit,
+            'total_credit' => (float) $totalCredit,
+            'closing_balance' => (float) $runningBalance
         ];
     }
 
