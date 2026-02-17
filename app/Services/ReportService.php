@@ -283,7 +283,6 @@ class ReportService
             'inventory_transactions.note as header_note',
             'inventory_transaction_lines.qty',
             'inventory_transaction_lines.unit_factor',
-            'inventory_transaction_lines.note as line_note',
             'users.name as created_by_name',
             'warehouses.name as warehouse_name',
             'units.name as unit_name'
