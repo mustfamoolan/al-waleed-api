@@ -264,6 +264,7 @@ class ReportService
         $query = InventoryTransaction::join('inventory_transaction_lines', 'inventory_transactions.id', '=', 'inventory_transaction_lines.inventory_transaction_id')
             ->leftJoin('users', 'inventory_transactions.created_by', '=', 'users.id')
             ->leftJoin('warehouses', 'inventory_transactions.warehouse_id', '=', 'warehouses.id')
+            ->leftJoin('units', 'inventory_transaction_lines.unit_id', '=', 'units.id')
             ->where('inventory_transaction_lines.product_id', $productId);
 
         if ($warehouseId)
@@ -284,7 +285,8 @@ class ReportService
             'inventory_transaction_lines.unit_factor',
             'inventory_transaction_lines.note as line_note',
             'users.name as created_by_name',
-            'warehouses.name as warehouse_name'
+            'warehouses.name as warehouse_name',
+            'units.name as unit_name'
         )
             ->orderBy('inventory_transactions.trans_date', 'asc')
             ->orderBy('inventory_transactions.id', 'asc')
