@@ -20,12 +20,11 @@ class ReportService
     // A. Customer Statement
     public function getCustomerStatement($customerId, $from = null, $to = null)
     {
-        // 1. Get the customer's account
-        $account = Account::where('reference_type', 'customer')
-            ->where('reference_id', $customerId)
-            ->first();
+        // 1. Get the customer and their account
+        $customer = Customer::find($customerId);
+        $accountId = $customer?->account_id;
 
-        if (!$account) {
+        if (!$accountId) {
             return [
                 'transactions' => [],
                 'opening_balance' => 0,
@@ -39,7 +38,7 @@ class ReportService
         $openingBalance = 0;
         if ($from) {
             $openingBalance = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-                ->where('journal_entry_lines.account_id', $account->id)
+                ->where('journal_entry_lines.account_id', $accountId)
                 ->where('journal_entries.status', 'posted')
                 ->whereDate('journal_entries.entry_date', '<', $from)
                 ->select(DB::raw('SUM(debit_amount - credit_amount) as balance'))
@@ -48,7 +47,7 @@ class ReportService
 
         // 3. Get Transactions within range
         $query = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entry_lines.account_id', $account->id)
+            ->where('journal_entry_lines.account_id', $accountId)
             ->where('journal_entries.status', 'posted')
             ->select(
                 'journal_entries.entry_date as date',
