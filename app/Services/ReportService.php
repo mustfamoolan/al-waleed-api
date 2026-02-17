@@ -11,6 +11,8 @@ use App\Models\Payment;
 use App\Models\PayrollRun;
 use App\Models\Staff;
 use App\Models\Supplier;
+use App\Models\Account;
+use App\Models\JournalEntryLine;
 use Illuminate\Support\Facades\DB;
 
 class ReportService
