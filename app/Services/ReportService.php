@@ -70,7 +70,7 @@ class ReportService
             return [
                 'date' => $txn->date,
                 'type' => $txn->type,
-                'ref' => $txn->ref_id,
+                'ref' => $txn->ref,
                 'debit' => $txn->debit,
                 'credit' => $txn->credit,
                 'notes' => $txn->notes,
@@ -87,46 +87,75 @@ class ReportService
         ];
     }
 
-    // B. Supplier Statement (Similar Logic)
+    // B. Supplier Statement (GL-Based)
     public function getSupplierStatement($supplierId, $from = null, $to = null)
     {
-        // PurchaseInvoices (Credit / Liability increases)
-        $bills = PurchaseInvoice::where('supplier_id', $supplierId)
-            ->where('status', 'posted')
-            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
-            ->get()->map(function ($bill) {
-                return [
-                    'date' => $bill->created_at->format('Y-m-d'),
-                    'type' => 'bill',
-                    'ref' => $bill->invoice_no,
-                    'debit' => 0,
-                    'credit' => $bill->total_iqd, // Payable increases
-                ];
-            });
+        // 1. Calculate Opening Balance (Balance before $from date)
+        // For Suppliers (Liability), Balance = Credit - Debit
+        $openingBalance = 0;
+        if ($from) {
+            $openingBalance = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
+                ->where('journal_entry_lines.partner_type', 'supplier')
+                ->where('journal_entry_lines.partner_id', $supplierId)
+                ->where('journal_entries.status', 'posted')
+                ->whereDate('journal_entries.entry_date', '<', $from)
+                ->select(DB::raw('SUM(credit_amount - debit_amount) as balance'))
+                ->value('balance') ?? 0;
+        }
 
-        // Payments (Debit / Liability decreases)
-        $payments = Payment::where('supplier_id', $supplierId)
-            ->where('status', 'posted')
-            ->when($from, fn($q) => $q->whereDate('created_at', '>=', $from))
-            ->when($to, fn($q) => $q->whereDate('created_at', '<=', $to))
-            ->get()->map(function ($pay) {
-                return [
-                    'date' => $pay->created_at->format('Y-m-d'),
-                    'type' => 'payment',
-                    'ref' => $pay->payment_no,
-                    'debit' => $pay->amount_iqd,
-                    'credit' => 0
-                ];
-            });
+        // 2. Get Transactions within range
+        $query = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
+            ->where('journal_entry_lines.partner_type', 'supplier')
+            ->where('journal_entry_lines.partner_id', $supplierId)
+            ->where('journal_entries.status', 'posted');
 
-        $txn = $bills->merge($payments)->sortBy('date')->values();
+        if ($from) {
+            $query->whereDate('journal_entries.entry_date', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('journal_entries.entry_date', '<=', $to);
+        }
+
+        $transactions = $query->select(
+            'journal_entries.entry_date as date',
+            'journal_entries.reference_type as type',
+            'journal_entries.reference_id as ref',
+            'journal_entries.description as notes',
+            'journal_entry_lines.debit_amount as debit',
+            'journal_entry_lines.credit_amount as credit'
+        )
+            ->orderBy('journal_entries.entry_date', 'asc')
+            ->orderBy('journal_entries.id', 'asc')
+            ->get();
+
+        // 3. Transform and add running balance
+        // For Suppliers: balance increases with Credit, decreases with Debit
+        $runningBalance = $openingBalance;
+        $totalDebit = 0;  // Total Paid (aliyna decreases)
+        $totalCredit = 0; // Total Purchased (aliyna increases)
+
+        $formattedTransactions = $transactions->map(function ($txn) use (&$runningBalance, &$totalDebit, &$totalCredit) {
+            $runningBalance += ($txn->credit - $txn->debit);
+            $totalDebit += $txn->debit;
+            $totalCredit += $txn->credit;
+
+            return [
+                'date' => $txn->date,
+                'type' => $txn->type,
+                'ref' => $txn->ref,
+                'debit' => $txn->debit,   // Paid
+                'credit' => $txn->credit, // Purchased
+                'notes' => $txn->notes,
+                'running_balance' => $runningBalance
+            ];
+        });
 
         return [
-            'transactions' => $txn,
-            'total_purchased' => $txn->sum('credit'),
-            'total_paid' => $txn->sum('debit'),
-            'closing_balance' => $txn->sum('credit') - $txn->sum('debit')
+            'opening_balance' => (float) $openingBalance,
+            'transactions' => $formattedTransactions,
+            'total_debit' => (float) $totalDebit,   // Total Paid
+            'total_credit' => (float) $totalCredit, // Total Purchased
+            'closing_balance' => (float) $runningBalance
         ];
     }
 
