@@ -186,10 +186,22 @@ class RepresentativeApiController extends Controller
             return response()->json(['data' => []]);
 
         $targets = AgentTarget::where('staff_id', $agent->id)
-            ->with('items.product', 'items.category')
+            ->with(['items.product', 'items.category'])
             ->orderBy('period_month', 'desc')
             ->get();
 
         return response()->json(['data' => $targets]);
+    }
+
+    /**
+     * Get products available for sale
+     */
+    public function products(Request $request)
+    {
+        $products = Product::where('is_active', true)
+            ->with(['category', 'baseUnit', 'packUnit'])
+            ->get();
+
+        return response()->json(['data' => $products]);
     }
 }

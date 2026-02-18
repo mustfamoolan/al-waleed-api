@@ -30,4 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Targets
     Route::get('my/targets', [RepresentativeApiController::class, 'targets']);
+
+    // Inventory
+    Route::get('products', [RepresentativeApiController::class, 'products']);
 });
