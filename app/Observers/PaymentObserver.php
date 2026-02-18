@@ -30,7 +30,7 @@ class PaymentObserver
                     'entry_date' => now(),
                     'reference_type' => 'payment',
                     'reference_id' => $payment->id,
-                    'description' => 'Payment #' . $payment->payment_no . ' - ' . $payment->payment_type,
+                    'description' => 'سند صرف رقم ' . $payment->payment_no . ' - ' . ($payment->payment_type === 'supplier_payment' ? 'دفع مورد' : ($payment->payment_type === 'salary_payment' ? 'راتب' : $payment->payment_type)),
                     'status' => 'posted',
                     'created_by' => auth()->id(),
                 ]);
