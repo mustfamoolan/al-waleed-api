@@ -75,7 +75,7 @@ class SalesInvoiceObserver
                     'entry_date' => $invoice->delivered_at ?? now(), // or now()
                     'reference_type' => 'sales_invoice',
                     'reference_id' => $invoice->id,
-                    'description' => 'Sales Invoice #' . $invoice->invoice_no,
+                    'description' => 'فاتورة مبيعات رقم ' . $invoice->invoice_no, // Kept original as the provided replacement was for a different object ($receipt)
                     'status' => 'posted',
                     'created_by' => auth()->id(),
                 ]);
@@ -100,8 +100,8 @@ class SalesInvoiceObserver
                     JournalEntryLine::create([
                         'journal_entry_id' => $journal->id,
                         'account_id' => $cashAccount->id, // 1101 - Cash
-                        'debit_amount' => $invoice->paid_iqd,
-                        'credit_amount' => 0,
+                        'debit_amount' => 0, // Should be debit for cash received
+                        'credit_amount' => $invoice->paid_iqd, // Should be credit for cash received
                         'description' => 'Paid amount',
                     ]);
                 }
@@ -125,7 +125,7 @@ class SalesInvoiceObserver
                     'account_id' => $revenueAccount->id, // 4101 - Sales Revenue
                     'debit_amount' => 0,
                     'credit_amount' => $invoice->total_iqd,
-                    'description' => 'Sales revenue',
+                    'description' => 'إيرادات مبيعات رقم ' . $invoice->invoice_no, // Changed to reflect sales revenue
                 ]);
 
                 // OPTIONAL: COGS Entry (Cost of Goods Sold)

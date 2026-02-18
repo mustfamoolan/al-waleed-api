@@ -77,7 +77,7 @@ class SalesReturnObserver
                     'entry_date' => $return->return_date,
                     'reference_type' => 'sales_return',
                     'reference_id' => $return->id,
-                    'description' => 'Sales Return #' . $return->return_no,
+                    'description' => 'مرتجع مبيعات رقم ' . $return->return_no,
                     'status' => 'posted',
                     'created_by' => auth()->id(),
                 ]);

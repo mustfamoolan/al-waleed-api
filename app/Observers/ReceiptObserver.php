@@ -34,7 +34,7 @@ class ReceiptObserver
                     'entry_date' => now(),
                     'reference_type' => 'receipt',
                     'reference_id' => $receipt->id,
-                    'description' => 'Receipt #' . $receipt->receipt_no . ' - ' . $receipt->receipt_type,
+                    'description' => 'وصل قبض رقم ' . $receipt->receipt_no . ($receipt->receipt_type === 'customer_payment' ? ' - دفع زبون' : ' - دخل عام'),
                     'status' => 'posted',
                     'created_by' => auth()->id(),
                 ]);

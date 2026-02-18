@@ -47,8 +47,8 @@ class ReportService
 
         $transactions = $query->select(
             'journal_entries.entry_date as date',
-            'journal_entries.reference_type',
-            'journal_entries.reference_id',
+            'journal_entries.reference_type as type',
+            'journal_entries.reference_id as ref',
             'journal_entries.description as notes',
             'journal_entry_lines.debit_amount as debit',
             'journal_entry_lines.credit_amount as credit'
