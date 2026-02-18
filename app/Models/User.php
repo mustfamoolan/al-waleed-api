@@ -48,4 +48,12 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    /**
+     * Get the sales agent record associated with the user.
+     */
+    public function salesAgent()
+    {
+        return $this->hasOne(SalesAgent::class);
+    }
 }
