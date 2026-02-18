@@ -8,12 +8,14 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('journal_entry_lines', function (Blueprint $table) {
-            $table->string('partner_type')->nullable()->after('account_id'); // customer, supplier, staff, sales_agent
-            $table->unsignedBigInteger('partner_id')->nullable()->after('partner_type');
+        if (!Schema::hasColumn('journal_entry_lines', 'partner_type')) {
+            Schema::table('journal_entry_lines', function (Blueprint $table) {
+                $table->string('partner_type')->nullable(); // customer, supplier, staff, sales_agent
+                $table->unsignedBigInteger('partner_id')->nullable();
 
-            $table->index(['partner_type', 'partner_id']);
-        });
+                $table->index(['partner_type', 'partner_id']);
+            });
+        }
 
         // Data Backfill
         $this->linkPartners();

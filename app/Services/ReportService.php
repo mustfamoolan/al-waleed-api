@@ -20,50 +20,40 @@ class ReportService
     // A. Customer Statement
     public function getCustomerStatement($customerId, $from = null, $to = null)
     {
-        // 1. Get the customer and their account
-        $customer = Customer::find($customerId);
-        $accountId = $customer?->account_id;
-
-        if (!$accountId) {
-            return [
-                'transactions' => [],
-                'opening_balance' => 0,
-                'total_debit' => 0,
-                'total_credit' => 0,
-                'closing_balance' => 0
-            ];
-        }
-
-        // 2. Calculate Opening Balance (Balance before $from date)
+        // 1. Calculate Opening Balance (Balance before $from date)
         $openingBalance = 0;
         if ($from) {
             $openingBalance = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-                ->where('journal_entry_lines.account_id', $accountId)
+                ->where('journal_entry_lines.partner_type', 'customer')
+                ->where('journal_entry_lines.partner_id', $customerId)
                 ->where('journal_entries.status', 'posted')
                 ->whereDate('journal_entries.entry_date', '<', $from)
                 ->select(DB::raw('SUM(debit_amount - credit_amount) as balance'))
                 ->value('balance') ?? 0;
         }
 
-        // 3. Get Transactions within range
+        // 2. Get Transactions within range
         $query = JournalEntryLine::join('journal_entries', 'journal_entry_lines.journal_entry_id', '=', 'journal_entries.id')
-            ->where('journal_entry_lines.account_id', $accountId)
-            ->where('journal_entries.status', 'posted')
-            ->select(
-                'journal_entries.entry_date as date',
-                'journal_entries.reference_type as type',
-                'journal_entries.reference_id as ref_id',
-                'journal_entries.description as notes',
-                'journal_entry_lines.debit_amount as debit',
-                'journal_entry_lines.credit_amount as credit'
-            );
+            ->where('journal_entry_lines.partner_type', 'customer')
+            ->where('journal_entry_lines.partner_id', $customerId)
+            ->where('journal_entries.status', 'posted');
 
-        if ($from)
+        if ($from) {
             $query->whereDate('journal_entries.entry_date', '>=', $from);
-        if ($to)
+        }
+        if ($to) {
             $query->whereDate('journal_entries.entry_date', '<=', $to);
+        }
 
-        $transactions = $query->orderBy('journal_entries.entry_date', 'asc')
+        $transactions = $query->select(
+            'journal_entries.entry_date as date',
+            'journal_entries.reference_type',
+            'journal_entries.reference_id',
+            'journal_entries.description as notes',
+            'journal_entry_lines.debit_amount as debit',
+            'journal_entry_lines.credit_amount as credit'
+        )
+            ->orderBy('journal_entries.entry_date', 'asc')
             ->orderBy('journal_entries.id', 'asc')
             ->get();
 

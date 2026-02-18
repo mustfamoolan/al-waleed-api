@@ -86,6 +86,10 @@ class PaymentObserver
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
                     'account_id' => $debitAccountId,
+                    'partner_type' => in_array($payment->payment_type, ['supplier_payment', 'salary_payment', 'advance'])
+                        ? ($payment->payment_type === 'supplier_payment' ? 'supplier' : 'staff')
+                        : null,
+                    'partner_id' => $payment->supplier_id ?? $payment->staff_id,
                     'debit_amount' => $payment->amount_iqd,
                     'credit_amount' => 0,
                 ]);

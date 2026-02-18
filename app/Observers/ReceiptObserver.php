@@ -71,6 +71,8 @@ class ReceiptObserver
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
                     'account_id' => $creditAccountId,
+                    'partner_type' => $receipt->receipt_type === 'customer_payment' ? 'customer' : null,
+                    'partner_id' => $receipt->customer_id,
                     'debit_amount' => 0,
                     'credit_amount' => $receipt->amount_iqd,
                 ]);

@@ -150,14 +150,15 @@ class OpeningBalanceController extends Controller
 
             // 4. Process Customer Balances (Debit Assets)
             foreach ($request->customer_balances as $cust) {
-                // Here we need the GL account associated with this customer
-                $acc = \App\Models\Account::where('reference_type', 'customer')
-                    ->where('reference_id', $cust['customer_id'])
-                    ->first();
-                if ($acc) {
+                $customer = \App\Models\Customer::find($cust['customer_id']);
+                $accId = $customer?->account_id ?? Account::where('account_code', '1201')->first()?->id;
+
+                if ($accId) {
                     JournalEntryLine::create([
                         'journal_entry_id' => $entry->id,
-                        'account_id' => $acc->id,
+                        'account_id' => $accId,
+                        'partner_type' => 'customer',
+                        'partner_id' => $cust['customer_id'],
                         'debit_amount' => $cust['amount'],
                         'credit_amount' => 0,
                     ]);
@@ -166,13 +167,15 @@ class OpeningBalanceController extends Controller
 
             // 5. Process Supplier Balances (Credit Liabilities)
             foreach ($request->supplier_balances as $supp) {
-                $acc = \App\Models\Account::where('reference_type', 'supplier')
-                    ->where('reference_id', $supp['supplier_id'])
-                    ->first();
-                if ($acc) {
+                $supplier = \App\Models\Supplier::find($supp['supplier_id']);
+                $accId = $supplier?->account_id ?? Account::where('account_code', '2101')->first()?->id;
+
+                if ($accId) {
                     JournalEntryLine::create([
                         'journal_entry_id' => $entry->id,
-                        'account_id' => $acc->id,
+                        'account_id' => $accId,
+                        'partner_type' => 'supplier',
+                        'partner_id' => $supp['supplier_id'],
                         'debit_amount' => 0,
                         'credit_amount' => $supp['amount'],
                     ]);

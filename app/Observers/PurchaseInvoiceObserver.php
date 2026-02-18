@@ -97,6 +97,8 @@ class PurchaseInvoiceObserver
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
                     'account_id' => $invoice->supplier->account_id ?? $payableAccount->id,
+                    'partner_type' => 'supplier',
+                    'partner_id' => $invoice->supplier_id,
                     'debit_amount' => 0,
                     'credit_amount' => $invoice->total_iqd,
                 ]);
@@ -106,6 +108,8 @@ class PurchaseInvoiceObserver
                     JournalEntryLine::create([
                         'journal_entry_id' => $journal->id,
                         'account_id' => $invoice->supplier->account_id ?? $payableAccount->id,
+                        'partner_type' => 'supplier',
+                        'partner_id' => $invoice->supplier_id,
                         'debit_amount' => $invoice->paid_iqd,
                         'credit_amount' => 0,
                     ]);

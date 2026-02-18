@@ -111,6 +111,8 @@ class SalesInvoiceObserver
                     JournalEntryLine::create([
                         'journal_entry_id' => $journal->id,
                         'account_id' => $customerAccount->id, // 1201 - AR
+                        'partner_type' => 'customer',
+                        'partner_id' => $invoice->customer_id,
                         'debit_amount' => $invoice->remaining_iqd,
                         'credit_amount' => 0,
                         'description' => 'Remaining balance',

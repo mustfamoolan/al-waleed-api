@@ -111,6 +111,8 @@ class SalesReturnObserver
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
                     'account_id' => $creditAccountId,
+                    'partner_type' => ($invoice && $invoice->payment_type === 'credit') ? 'customer' : null,
+                    'partner_id' => $invoice?->customer_id,
                     'debit_amount' => 0,
                     'credit_amount' => $return->total_iqd,
                 ]);

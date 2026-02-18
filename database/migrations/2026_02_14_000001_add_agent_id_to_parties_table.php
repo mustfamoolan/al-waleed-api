@@ -10,9 +10,11 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('parties', function (Blueprint $table) {
-            $table->foreignId('agent_id')->nullable()->after('staff_id')->constrained('sales_agents')->nullOnDelete();
-        });
+        if (!Schema::hasColumn('parties', 'agent_id')) {
+            Schema::table('parties', function (Blueprint $table) {
+                $table->foreignId('agent_id')->nullable()->after('staff_id')->constrained('sales_agents')->nullOnDelete();
+            });
+        }
     }
 
     /**
