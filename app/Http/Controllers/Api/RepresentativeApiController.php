@@ -230,6 +230,7 @@ class RepresentativeApiController extends Controller
     {
         $products = Product::where('is_active', true)
             ->with(['category', 'baseUnit', 'packUnit'])
+            ->withSum('balances', 'qty_on_hand')
             ->get();
 
         return response()->json(['data' => $products]);
