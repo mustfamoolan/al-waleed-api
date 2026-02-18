@@ -24,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // My Managed Records
     Route::get('my/customers', [RepresentativeApiController::class, 'customers']);
+    Route::post('my/customers', [RepresentativeApiController::class, 'storeCustomer']);
     Route::get('my/sales', [RepresentativeApiController::class, 'sales']);
     Route::post('my/sales', [RepresentativeApiController::class, 'storeInvoice']);
     Route::post('my/sales/{invoice}/submit', [RepresentativeApiController::class, 'submitInvoice']);

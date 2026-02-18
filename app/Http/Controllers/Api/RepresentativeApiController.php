@@ -194,6 +194,36 @@ class RepresentativeApiController extends Controller
     }
 
     /**
+     * Store a new customer for the authenticated agent
+     */
+    public function storeCustomer(Request $request)
+    {
+        $agent = $request->user()->salesAgent;
+        if (!$agent)
+            abort(403);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20|unique:customers,phone',
+            'address' => 'nullable|string',
+        ]);
+
+        $customer = Customer::create([
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'address' => $validated['address'] ?? '',
+            'agent_id' => $agent->id,
+            'sales_type' => 'credit',
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'message' => 'تم إضافة الزبون بنجاح',
+            'data' => $customer
+        ]);
+    }
+
+    /**
      * Get products available for sale
      */
     public function products(Request $request)
