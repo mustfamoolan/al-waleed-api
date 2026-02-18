@@ -74,8 +74,10 @@ class ReportController extends Controller
 
     public function customerPurchases(Request $request)
     {
-        $request->validate(['customer_id' => 'required']);
-        return response()->json($this->reportService->getCustomerPurchases($request->customer_id, $request->date_from, $request->date_to));
+        if ($request->customer_id) {
+            return response()->json($this->reportService->getCustomerPurchases($request->customer_id, $request->date_from, $request->date_to));
+        }
+        return response()->json($this->reportService->getAllCustomersPurchases($request->date_from, $request->date_to));
     }
 
     public function debtsSummary(Request $request)

@@ -382,12 +382,35 @@ class ReportService
             ->when($to, fn($q) => $q->whereDate('sales_invoices.created_at', '<=', $to))
             ->select(
                 'products.name as product_name',
-                DB::raw('SUM(sales_invoice_lines.qty) as total_qty'),
+                DB::raw('SUM(sales_invoice_lines.qty * sales_invoice_lines.unit_factor) as total_qty'),
                 DB::raw('SUM(sales_invoice_lines.line_total_iqd) as total_spent'),
                 DB::raw('COUNT(sales_invoices.id) as times_purchased')
             )
             ->groupBy('products.name')
             ->orderByDesc('total_spent')
+            ->get();
+    }
+
+    public function getAllCustomersPurchases($from = null, $to = null)
+    {
+        return DB::table('customers')
+            ->leftJoin('sales_invoices', function ($join) use ($from, $to) {
+                $join->on('customers.id', '=', 'sales_invoices.customer_id')
+                    ->where('sales_invoices.status', '=', 'delivered');
+                if ($from)
+                    $join->whereDate('sales_invoices.created_at', '>=', $from);
+                if ($to)
+                    $join->whereDate('sales_invoices.created_at', '<=', $to);
+            })
+            ->select(
+                'customers.id',
+                'customers.name as customer_name',
+                DB::raw('COUNT(sales_invoices.id) as invoice_count'),
+                DB::raw('COALESCE(SUM(sales_invoices.total_iqd), 0) as total_amount'),
+                DB::raw('MAX(sales_invoices.created_at) as last_purchase_date')
+            )
+            ->groupBy('customers.id', 'customers.name')
+            ->orderByDesc('total_amount')
             ->get();
     }
 
