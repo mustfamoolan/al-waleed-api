@@ -134,7 +134,7 @@ class RepresentativeApiController extends Controller
                 'payment_type' => $validated['payment_type'],
                 'subtotal_iqd' => $subtotalIqd,
                 'total_iqd' => $subtotalIqd,
-                'status' => 'draft',
+                'status' => 'pending_approval',
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => auth()->id(),
             ]);
