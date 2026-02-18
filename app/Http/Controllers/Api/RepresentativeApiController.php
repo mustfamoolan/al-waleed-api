@@ -127,7 +127,7 @@ class RepresentativeApiController extends Controller
 
             $invoice = SalesInvoice::create([
                 'invoice_no' => 'REP-' . strtoupper(uniqid()),
-                'source_type' => 'mobile',
+                'source_type' => 'agent',
                 'source_user_id' => auth()->id(),
                 'agent_id' => $agent->id,
                 'customer_id' => $validated['customer_id'],
