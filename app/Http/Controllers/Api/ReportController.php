@@ -204,4 +204,11 @@ class ReportController extends Controller
             $this->reportService->getStaffPurchasesStatement($request->date_from, $request->date_to)
         );
     }
+
+    public function generalDebts(Request $request)
+    {
+        return response()->json(
+            $this->reportService->getGeneralDebts($request->date_as_of)
+        );
+    }
 }

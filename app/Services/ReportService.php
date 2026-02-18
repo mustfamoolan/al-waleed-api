@@ -656,5 +656,66 @@ class ReportService
             ->orderByDesc('total_amount')
             ->get();
     }
+
+    public function getGeneralDebts($dateAsOf = null)
+    {
+        $date = $dateAsOf ?? now();
+
+        // Customers
+        $customers = Customer::all()->map(function ($c) use ($date) {
+            $debit = SalesInvoice::where('customer_id', $c->id)->where('status', 'delivered')->whereDate('created_at', '<=', $date)->sum('total_iqd');
+            $credit = Receipt::where('customer_id', $c->id)->where('status', 'posted')->whereDate('created_at', '<=', $date)->sum('amount_iqd');
+            $balance = $debit - $credit;
+            return [
+                'id' => $c->id,
+                'name' => $c->name,
+                'phone' => $c->phone,
+                'address' => $c->address,
+                'balance' => $balance,
+                'type' => $balance >= 0 ? 'lana' : 'alyna',
+                'entity_type' => 'customer'
+            ];
+        })->filter(fn($c) => abs($c['balance']) > 0);
+
+        // Suppliers
+        $suppliers = Supplier::all()->map(function ($s) use ($date) {
+            $credit = PurchaseInvoice::where('supplier_id', $s->id)->where('status', 'posted')->whereDate('created_at', '<=', $date)->sum('total_iqd');
+            $debit = Payment::where('supplier_id', $s->id)->where('status', 'posted')->whereDate('created_at', '<=', $date)->sum('amount_iqd');
+            $balance = $debit - $credit; // Debit balance = Lana
+            return [
+                'id' => $s->id,
+                'name' => $s->name,
+                'phone' => $s->phone,
+                'address' => $s->address,
+                'balance' => $balance,
+                'type' => $balance >= 0 ? 'lana' : 'alyna',
+                'entity_type' => 'supplier'
+            ];
+        })->filter(fn($s) => abs($s['balance']) > 0);
+
+        // Staff
+        $staff = Staff::all()->map(function ($st) use ($date) {
+            $debit = Payment::where('staff_id', $st->id)->where('status', 'posted')->whereDate('created_at', '<=', $date)->sum('amount_iqd');
+            $credit = \App\Models\PayrollAdjustment::where('staff_id', $st->id)->whereDate('created_at', '<=', $date)->sum('amount_iqd');
+            $balance = $debit - $credit;
+            return [
+                'id' => $st->id,
+                'name' => $st->name,
+                'phone' => $st->phone,
+                'address' => $st->notes, // Use notes as address placeholder for staff
+                'balance' => $balance,
+                'type' => $balance >= 0 ? 'lana' : 'alyna',
+                'entity_type' => 'staff'
+            ];
+        })->filter(fn($st) => abs($st['balance']) > 0);
+
+        $all = $customers->concat($suppliers)->concat($staff)->sortByDesc(fn($x) => abs($x['balance']))->values();
+
+        return [
+            'total_lana' => $all->where('type', 'lana')->sum('balance'),
+            'total_alyna' => abs($all->where('type', 'alyna')->sum('balance')),
+            'records' => $all
+        ];
+    }
 }
 
