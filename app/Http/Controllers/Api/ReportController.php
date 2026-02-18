@@ -197,4 +197,11 @@ class ReportController extends Controller
     {
         return response()->json($this->reportService->getAging($request->type ?? 'customer', $request->date_as_of));
     }
+
+    public function staffPurchasesStatement(Request $request)
+    {
+        return response()->json(
+            $this->reportService->getStaffPurchasesStatement($request->date_from, $request->date_to)
+        );
+    }
 }

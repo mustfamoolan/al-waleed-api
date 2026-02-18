@@ -630,5 +630,31 @@ class ReportService
                 });
         }
     }
+
+    public function getStaffPurchasesStatement($from = null, $to = null)
+    {
+        return DB::table('staff')
+            ->leftJoin('users', 'staff.user_id', '=', 'users.id')
+            ->leftJoin('sales_invoices', function ($join) use ($from, $to) {
+                $join->on('users.id', '=', 'sales_invoices.source_user_id')
+                    ->where('sales_invoices.status', '=', 'delivered');
+                if ($from)
+                    $join->whereDate('sales_invoices.created_at', '>=', $from);
+                if ($to)
+                    $join->whereDate('sales_invoices.created_at', '<=', $to);
+            })
+            ->select(
+                'staff.id',
+                'staff.name as staff_name',
+                DB::raw('COUNT(sales_invoices.id) as invoice_count'),
+                DB::raw('COALESCE(SUM(sales_invoices.total_iqd), 0) as total_amount'),
+                DB::raw('COALESCE(SUM(sales_invoices.paid_iqd), 0) as paid_amount'),
+                DB::raw('COALESCE(SUM(sales_invoices.remaining_iqd), 0) as balance'),
+                DB::raw('MAX(sales_invoices.created_at) as last_purchase_date')
+            )
+            ->groupBy('staff.id', 'staff.name')
+            ->orderByDesc('total_amount')
+            ->get();
+    }
 }
 

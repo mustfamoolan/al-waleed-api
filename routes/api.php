@@ -166,4 +166,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/low-profit-products', [\App\Http\Controllers\Api\ReportController::class, 'lowProfitProducts']);
     Route::get('reports/inventory-balances', [\App\Http\Controllers\Api\ReportController::class, 'inventoryBalances']);
     Route::get('reports/aging', [\App\Http\Controllers\Api\ReportController::class, 'aging']);
+    Route::get('reports/staff-purchases', [\App\Http\Controllers\Api\ReportController::class, 'staffPurchasesStatement']);
 });
