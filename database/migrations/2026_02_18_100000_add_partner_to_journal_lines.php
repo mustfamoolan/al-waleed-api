@@ -34,13 +34,32 @@ return new class extends Migration {
             WHERE jel.partner_id IS NULL AND r.customer_id IS NOT NULL
         ");
 
-        // 3. Link Sales Returns -> Customers
+        // 3. Link Sales Returns -> Customers (via Invoice)
         DB::statement("
             UPDATE journal_entry_lines jel
             JOIN journal_entries je ON jel.journal_entry_id = je.id
             JOIN sales_returns sr ON je.reference_type = 'sales_return' AND je.reference_id = sr.id
-            SET jel.partner_type = 'customer', jel.partner_id = sr.customer_id
+            JOIN sales_invoices si ON sr.sales_invoice_id = si.id
+            SET jel.partner_type = 'customer', jel.partner_id = si.customer_id
             WHERE jel.partner_id IS NULL
+        ");
+
+        // 4. Link Purchase Invoices -> Suppliers
+        DB::statement("
+            UPDATE journal_entry_lines jel
+            JOIN journal_entries je ON jel.journal_entry_id = je.id
+            JOIN purchase_invoices pi ON je.reference_type = 'purchase_invoice' AND je.reference_id = pi.id
+            SET jel.partner_type = 'supplier', jel.partner_id = pi.supplier_id
+            WHERE jel.partner_id IS NULL
+        ");
+
+        // 5. Link Payments -> Suppliers
+        DB::statement("
+            UPDATE journal_entry_lines jel
+            JOIN journal_entries je ON jel.journal_entry_id = je.id
+            JOIN payments p ON je.reference_type = 'payment' AND je.reference_id = p.id
+            SET jel.partner_type = 'supplier', jel.partner_id = p.supplier_id
+            WHERE jel.partner_id IS NULL AND p.supplier_id IS NOT NULL
         ");
     }
 
