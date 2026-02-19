@@ -93,40 +93,48 @@ class SalesInvoiceObserver
                     $customerAccount = $defaultARAccount;
                 }
 
-                // Revenue Entry - Split between Cash and AR based on paid/remaining amounts
-
-                // 1. If there's a paid amount, record it in Cash
-                if ($invoice->paid_iqd > 0) {
-                    JournalEntryLine::create([
-                        'journal_entry_id' => $journal->id,
-                        'account_id' => $cashAccount->id, // 1101 - Cash
-                        'debit_amount' => 0, // Should be debit for cash received
-                        'credit_amount' => $invoice->paid_iqd, // Should be credit for cash received
-                        'description' => 'Paid amount',
-                    ]);
-                }
-
-                // 2. If there's a remaining amount, record it in Accounts Receivable
-                if ($invoice->remaining_iqd > 0) {
-                    JournalEntryLine::create([
-                        'journal_entry_id' => $journal->id,
-                        'account_id' => $customerAccount->id, // 1201 - AR
-                        'partner_type' => 'customer',
-                        'partner_id' => $invoice->customer_id,
-                        'debit_amount' => $invoice->remaining_iqd,
-                        'credit_amount' => 0,
-                        'description' => 'Remaining balance',
-                    ]);
-                }
-
-                // 3. Credit side (Revenue) - always the full amount
+                // 1. Credit side (Revenue) - always the full amount
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
                     'account_id' => $revenueAccount->id, // 4101 - Sales Revenue
                     'debit_amount' => 0,
                     'credit_amount' => $invoice->total_iqd,
-                    'description' => 'إيرادات مبيعات رقم ' . $invoice->invoice_no, // Changed to reflect sales revenue
+                    'description' => 'إيرادات مبيعات رقم ' . $invoice->invoice_no,
                 ]);
+
+                // 2. Debit side (Customer AR) - always the full amount (Accrual Basis)
+                JournalEntryLine::create([
+                    'journal_entry_id' => $journal->id,
+                    'account_id' => $customerAccount->id, // 1201 - AR
+                    'partner_type' => 'customer',
+                    'partner_id' => $invoice->customer_id,
+                    'debit_amount' => $invoice->total_iqd,
+                    'credit_amount' => 0,
+                    'description' => 'قيمة الفاتورة',
+                ]);
+
+                // 3. Handle Immediate Payment (If any)
+                if ($invoice->paid_iqd > 0) {
+                    // Dr Cash (Receive Money)
+                    JournalEntryLine::create([
+                        'journal_entry_id' => $journal->id,
+                        'account_id' => $cashAccount->id, // 1101 - Cash
+                        'debit_amount' => $invoice->paid_iqd,
+                        'credit_amount' => 0,
+                        'description' => 'دفعة نقدية فورية',
+                    ]);
+
+                    // Cr Customer AR (Reduce Debt)
+                    JournalEntryLine::create([
+                        'journal_entry_id' => $journal->id,
+                        'account_id' => $customerAccount->id, // 1201 - AR
+                        'partner_type' => 'customer',
+                        'partner_id' => $invoice->customer_id,
+                        'debit_amount' => 0,
+                        'credit_amount' => $invoice->paid_iqd,
+                        'description' => 'تسديد فوري',
+                    ]);
+                }
 
                 // OPTIONAL: COGS Entry (Cost of Goods Sold)
                 // Dr COGS (5101) / Cr Inventory (1301)
