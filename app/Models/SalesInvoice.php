@@ -36,6 +36,9 @@ class SalesInvoice extends Model
         'journal_entry_id',
         'created_by',
         'notes',
+        'customer_city',
+        'customer_phone',
+        'customer_address',
     ];
 
     public function lines()

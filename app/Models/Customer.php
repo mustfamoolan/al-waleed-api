@@ -13,6 +13,7 @@ class Customer extends Model
         'name',
         'phone',
         'address',
+        'city',
         'sales_type',
         'credit_limit',
         'account_id',

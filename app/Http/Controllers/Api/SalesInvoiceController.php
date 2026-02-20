@@ -62,6 +62,10 @@ class SalesInvoiceController extends Controller
                 'remaining_iqd' => $remainingIqd,
                 'status' => 'draft',
                 'created_by' => auth()->id(),
+                'notes' => $request->notes,
+                'customer_city' => $request->customer_city,
+                'customer_phone' => $request->customer_phone,
+                'customer_address' => $request->customer_address,
             ]);
 
             foreach ($request->lines as $line) {
