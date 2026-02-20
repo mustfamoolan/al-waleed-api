@@ -44,6 +44,7 @@ class SalesInvoiceController extends Controller
             }
             $remainingIqd = $totalIqd - $paidIqd;
 
+            $status = $request->status ?? 'draft';
             $invoice = SalesInvoice::create([
                 'invoice_no' => 'SI-' . time(),
                 'source_type' => $request->source_type ?? 'office',
@@ -60,7 +61,8 @@ class SalesInvoiceController extends Controller
                 'total_iqd' => $totalIqd,
                 'paid_iqd' => $paidIqd,
                 'remaining_iqd' => $remainingIqd,
-                'status' => 'draft',
+                'status' => $status,
+                'approved_by_user_id' => $status === 'approved' ? auth()->id() : null,
                 'created_by' => auth()->id(),
                 'notes' => $request->notes,
                 'customer_city' => $request->customer_city,
@@ -83,9 +85,10 @@ class SalesInvoiceController extends Controller
             return $invoice;
         });
 
-        // Auto submit/approve logic check could go here if source_type == office
-
-        return response()->json(['message' => 'Invoice created', 'invoice' => $invoice->load('lines.product', 'lines.unit')], 201);
+        return response()->json([
+            'message' => 'Invoice created',
+            'data' => $invoice->load('party', 'customer', 'agent', 'creator', 'lines.product', 'lines.unit')
+        ], 201);
     }
 
     // Workflow Actions
