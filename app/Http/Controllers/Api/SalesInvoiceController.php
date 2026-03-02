@@ -46,7 +46,7 @@ class SalesInvoiceController extends Controller
 
             $status = $request->status ?? 'draft';
             $invoice = SalesInvoice::create([
-                'invoice_no' => 'SI-' . time(),
+                'invoice_no' => 'SI-' . str_pad((SalesInvoice::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
                 'source_type' => $request->source_type ?? 'office',
                 'source_user_id' => auth()->id(),
                 'party_id' => $request->party_id,
@@ -172,5 +172,79 @@ class SalesInvoiceController extends Controller
 
         $invoice->update(['status' => 'canceled']);
         return response()->json(['message' => 'Invoice canceled']);
+    }
+
+    public function update(Request $request, SalesInvoice $invoice)
+    {
+        if ($invoice->status !== 'draft') {
+            return response()->json(['message' => 'لا يمكن تعديل فاتورة غير مسودة'], 400);
+        }
+
+        $invoice = DB::transaction(function () use ($request, $invoice) {
+            // Recalculate totals
+            $subtotalIqd = 0;
+            foreach ($request->lines as $line) {
+                $subtotalIqd += ($line['qty'] * $line['price_iqd']);
+            }
+            $discountIqd = $request->discount_iqd ?? 0;
+            $totalIqd = $subtotalIqd - $discountIqd;
+
+            $paidIqd = 0;
+            if ($request->payment_type === 'cash') {
+                $paidIqd = $totalIqd;
+            } else {
+                $paidIqd = $request->paid_iqd ?? 0;
+            }
+            $remainingIqd = $totalIqd - $paidIqd;
+
+            // Update invoice fields
+            $invoice->update([
+                'party_id' => $request->party_id,
+                'customer_id' => $request->customer_id,
+                'agent_id' => $request->agent_id,
+                'payment_type' => $request->payment_type,
+                'due_date' => $request->due_date,
+                'subtotal_iqd' => $subtotalIqd,
+                'discount_iqd' => $discountIqd,
+                'total_iqd' => $totalIqd,
+                'paid_iqd' => $paidIqd,
+                'remaining_iqd' => $remainingIqd,
+                'notes' => $request->notes,
+                'customer_city' => $request->customer_city,
+                'customer_phone' => $request->customer_phone,
+                'customer_address' => $request->customer_address,
+            ]);
+
+            // Replace lines
+            $invoice->lines()->delete();
+            foreach ($request->lines as $line) {
+                SalesInvoiceLine::create([
+                    'sales_invoice_id' => $invoice->id,
+                    'product_id' => $line['product_id'],
+                    'qty' => $line['qty'],
+                    'unit_id' => $line['unit_id'],
+                    'unit_factor' => $line['unit_factor'] ?? 1,
+                    'price_iqd' => $line['price_iqd'],
+                    'line_total_iqd' => $line['qty'] * $line['price_iqd'],
+                    'cost_iqd_snapshot' => $line['cost_iqd_snapshot'] ?? 0,
+                ]);
+            }
+            return $invoice;
+        });
+
+        return response()->json([
+            'message' => 'تم تحديث الفاتورة بنجاح',
+            'data' => $invoice->load('party', 'customer', 'agent', 'lines.product', 'lines.unit')
+        ]);
+    }
+
+    public function destroy(SalesInvoice $invoice)
+    {
+        if ($invoice->status !== 'draft') {
+            return response()->json(['message' => 'لا يمكن حذف فاتورة غير مسودة'], 400);
+        }
+        $invoice->lines()->delete();
+        $invoice->delete();
+        return response()->json(['message' => 'تم حذف الفاتورة']);
     }
 }

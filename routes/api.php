@@ -77,26 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('agent-targets', \App\Http\Controllers\Api\AgentTargetController::class);
     Route::post('agent-targets/calculate-bonus', [\App\Http\Controllers\Api\AgentTargetController::class, 'calculateBonus']);
 
-    // Sales Invoices
-    Route::apiResource('sales-invoices', \App\Http\Controllers\Api\SalesInvoiceController::class);
-    Route::post('sales-invoices/{invoice}/submit', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'submit']);
-    Route::post('sales-invoices/{invoice}/approve', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'approve']);
-    Route::post('sales-invoices/{invoice}/start-preparing', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'startPreparing']);
-
-    Route::post('purchase-returns', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'store']);
-    Route::post('purchase-returns/{purchaseReturn}/post', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'post']);
-
-    // Staff
-    Route::apiResource('staff', \App\Http\Controllers\Api\StaffController::class);
-
-    // Pre-Stage 6 (Staff & Workflow)
-    Route::apiResource('staff', \App\Http\Controllers\Api\StaffController::class);
-    Route::get('customers/{customer}/addresses', [\App\Http\Controllers\Api\CustomerAddressController::class, 'index']);
-    Route::post('customers/{customer}/addresses', [\App\Http\Controllers\Api\CustomerAddressController::class, 'store']);
-    Route::put('customers/{customer}/addresses/{address}', [\App\Http\Controllers\Api\CustomerAddressController::class, 'update']);
-    Route::delete('customers/{customer}/addresses/{address}', [\App\Http\Controllers\Api\CustomerAddressController::class, 'destroy']);
-
-    // Sales
+    // Sales Invoices — Full Workflow
     Route::apiResource('sales-invoices', \App\Http\Controllers\Api\SalesInvoiceController::class);
     Route::post('sales-invoices/{invoice}/submit', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'submit']);
     Route::post('sales-invoices/{invoice}/approve', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'approve']);
@@ -107,8 +88,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('sales-invoices/{invoice}/mark-delivered', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'markDelivered']);
     Route::post('sales-invoices/{invoice}/cancel', [\App\Http\Controllers\Api\SalesInvoiceController::class, 'cancel']);
 
+    // Sales Returns
     Route::post('sales-returns', [\App\Http\Controllers\Api\SalesReturnController::class, 'store']);
     Route::post('sales-returns/{return}/post', [\App\Http\Controllers\Api\SalesReturnController::class, 'post']);
+
+    // Purchase Returns
+    Route::post('purchase-returns', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'store']);
+    Route::post('purchase-returns/{purchaseReturn}/post', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'post']);
+
+    // Staff
+    Route::apiResource('staff', \App\Http\Controllers\Api\StaffController::class);
+    Route::get('customers/{customer}/addresses', [\App\Http\Controllers\Api\CustomerAddressController::class, 'index']);
+    Route::post('customers/{customer}/addresses', [\App\Http\Controllers\Api\CustomerAddressController::class, 'store']);
+    Route::put('customers/{customer}/addresses/{address}', [\App\Http\Controllers\Api\CustomerAddressController::class, 'update']);
+    Route::delete('customers/{customer}/addresses/{address}', [\App\Http\Controllers\Api\CustomerAddressController::class, 'destroy']);
 
     // Finance (Stage 7)
     Route::apiResource('cash-accounts', \App\Http\Controllers\Api\CashAccountController::class);

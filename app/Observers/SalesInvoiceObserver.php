@@ -19,11 +19,17 @@ class SalesInvoiceObserver
         if ($invoice->isDirty('status') && $invoice->status === 'prepared') {
             DB::transaction(function () use ($invoice) {
 
+                // Resolve default warehouse (prefer invoice's, fallback to first active)
+                $warehouseId = $invoice->warehouse_id
+                    ?? \App\Models\Warehouse::where('is_active', true)->value('id')
+                    ?? \App\Models\Warehouse::value('id')
+                    ?? 1;
+
                 // 1. Inventory Transaction (OUT)
                 $transaction = InventoryTransaction::create([
                     'trans_date' => now(), // Prepared Date
                     'trans_type' => 'sale', // OUT
-                    'warehouse_id' => 1, // Default Warehouse for now
+                    'warehouse_id' => $warehouseId,
                     'reference_type' => 'sales_invoice',
                     'reference_id' => $invoice->id,
                     'created_by' => auth()->id(),
