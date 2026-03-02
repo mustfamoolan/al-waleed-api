@@ -26,7 +26,7 @@ class ReceiptController extends Controller
         ]);
 
         $receipt = Receipt::create([
-            'receipt_no' => 'RC-' . time(),
+            'receipt_no' => 'RC' . date('Y') . str_pad((Receipt::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
             'party_id' => $request->party_id,
             'customer_id' => $request->customer_id,
             'receipt_type' => $request->receipt_type,

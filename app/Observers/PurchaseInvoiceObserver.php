@@ -121,6 +121,10 @@ class PurchaseInvoiceObserver
                     ]);
                 }
 
+                if ($invoice->paid_iqd >= $invoice->total_iqd) {
+                    $invoice->status = 'paid';
+                    $invoice->is_paid = true;
+                }
                 $invoice->journal_entry_id = $journal->id;
                 $invoice->saveQuietly();
             });

@@ -21,12 +21,19 @@ class ReceiptObserver
                         $invoice->remaining_iqd -= $allocation->allocated_iqd;
                         $invoice->paid_iqd += $allocation->allocated_iqd;
                         if ($invoice->remaining_iqd <= 0) {
-                            // $invoice->is_paid = true; // If column exists, typically we use remaining > 0 check
-                            // If is_paid exists in DB, update it.
+                            $invoice->status = 'paid';
                             $invoice->is_paid = true;
                         }
                         $invoice->save();
                     }
+                }
+
+                // 1.1 Update Customer Stats
+                if ($receipt->customer_id && $receipt->receipt_type === 'customer_payment') {
+                    \App\Models\Customer::where('id', $receipt->customer_id)->update([
+                        'total_paid' => DB::raw('total_paid + ' . $receipt->amount_iqd),
+                        'last_payment_date' => now()
+                    ]);
                 }
 
                 // 2. Create Journal Entry

@@ -14,13 +14,15 @@ class PaymentObserver
     {
         if ($payment->isDirty('status') && $payment->status === 'posted') {
             DB::transaction(function () use ($payment) {
-                // 1. Process Allocations
                 foreach ($payment->allocations as $allocation) {
                     $invoice = $allocation->invoice;
                     if ($invoice) {
                         $invoice->remaining_iqd -= $allocation->allocated_iqd;
                         $invoice->paid_iqd += $allocation->allocated_iqd;
-                        // $invoice->is_paid = $invoice->remaining_iqd <= 0;
+                        if ($invoice->remaining_iqd <= 0) {
+                            $invoice->status = 'paid';
+                            $invoice->is_paid = true;
+                        }
                         $invoice->save();
                     }
                 }
@@ -53,7 +55,7 @@ class PaymentObserver
                     case 'supplier_payment':
                         $supplierAccount = Account::where('account_code', '2101')->first();
                         $debitAccountId = $payment->supplier_id
-                            ? (\App\Models\Supplier::find($payment->supplier_id)->account_id ?? $supplierAccount->id)
+                            ? ($payment->supplier->account_id ?? $supplierAccount->id)
                             : $supplierAccount->id;
                         break;
                     case 'expense':

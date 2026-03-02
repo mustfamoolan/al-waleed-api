@@ -18,10 +18,11 @@ class SalesReturnObserver
         if ($return->isDirty('status') && $return->status === 'posted') {
             DB::transaction(function () use ($return) {
                 // 1. Inventory Transaction (IN - Return)
+                $warehouseId = $return->warehouse_id ?? 1;
                 $transaction = InventoryTransaction::create([
                     'trans_date' => $return->return_date,
                     'trans_type' => 'sale_return',
-                    'warehouse_id' => 1,
+                    'warehouse_id' => $warehouseId,
                     'reference_type' => 'sales_return',
                     'reference_id' => $return->id,
                     'created_by' => auth()->id(),
@@ -54,7 +55,7 @@ class SalesReturnObserver
                     // Increase Qty. Value increases by (Qty * Cost).
                     // Weighted Average MIGHT change if return cost != current average.
                     $balance = InventoryBalance::firstOrNew([
-                        'warehouse_id' => 1,
+                        'warehouse_id' => $warehouseId,
                         'product_id' => $line->product_id
                     ]);
 
@@ -70,6 +71,11 @@ class SalesReturnObserver
                     $balance->qty_on_hand = $totalQty;
                     $balance->avg_cost_iqd = $totalQty > 0 ? $totalValue / $totalQty : $costIqd;
                     $balance->save();
+                }
+
+                // 2. Update Customer Stats
+                if ($return->customer) {
+                    $return->customer->decrement('total_debt', $return->total_iqd);
                 }
 
                 // 2. Journal Entry (Reverse Sales)

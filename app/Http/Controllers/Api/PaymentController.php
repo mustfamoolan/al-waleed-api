@@ -26,7 +26,7 @@ class PaymentController extends Controller
         ]);
 
         $payment = Payment::create([
-            'payment_no' => 'PY-' . time(),
+            'payment_no' => 'PY' . date('Y') . str_pad((Payment::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
             'party_id' => $request->party_id,
             'supplier_id' => $request->supplier_id,
             'staff_id' => $request->staff_id,

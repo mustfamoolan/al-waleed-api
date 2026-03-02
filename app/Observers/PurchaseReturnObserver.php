@@ -17,10 +17,11 @@ class PurchaseReturnObserver
         if ($return->isDirty('status') && $return->status === 'posted') {
             DB::transaction(function () use ($return) {
                 // 1. Inventory Transaction (OUT)
+                $warehouseId = $return->warehouse_id ?? 1;
                 $transaction = InventoryTransaction::create([
                     'trans_date' => $return->return_date,
                     'trans_type' => 'purchase_return',
-                    'warehouse_id' => 1,
+                    'warehouse_id' => $warehouseId,
                     'reference_type' => 'purchase_return',
                     'reference_id' => $return->id,
                     'created_by' => auth()->id(),
@@ -41,7 +42,7 @@ class PurchaseReturnObserver
                     ]);
 
                     // Decrease Balance
-                    $balance = InventoryBalance::where('warehouse_id', 1)
+                    $balance = InventoryBalance::where('warehouse_id', $warehouseId)
                         ->where('product_id', $line->product_id)
                         ->first();
 

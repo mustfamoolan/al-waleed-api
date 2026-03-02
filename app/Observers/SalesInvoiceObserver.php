@@ -142,6 +142,14 @@ class SalesInvoiceObserver
                     ]);
                 }
 
+                // 4. Update Customer Statistics
+                if ($invoice->customer) {
+                    $invoice->customer->increment('total_debt', $invoice->total_iqd);
+                    if ($invoice->paid_iqd > 0) {
+                        $invoice->customer->increment('total_paid', $invoice->paid_iqd);
+                    }
+                }
+
                 // OPTIONAL: COGS Entry (Cost of Goods Sold)
                 // Dr COGS (5101) / Cr Inventory (1301)
                 // Calculate Total Cost
