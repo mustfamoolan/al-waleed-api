@@ -121,6 +121,14 @@ class PurchaseInvoiceObserver
                     ]);
                 }
 
+                // 3. Update Supplier Statistics
+                if ($invoice->supplier) {
+                    $invoice->supplier->increment('total_debt', $invoice->total_iqd);
+                    if ($invoice->paid_iqd > 0) {
+                        $invoice->supplier->increment('total_paid', $invoice->paid_iqd);
+                    }
+                }
+
                 if ($invoice->paid_iqd >= $invoice->total_iqd) {
                     $invoice->status = 'paid';
                     $invoice->is_paid = true;

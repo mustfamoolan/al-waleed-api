@@ -96,6 +96,14 @@ class PaymentObserver
                     'credit_amount' => 0,
                 ]);
 
+                // 3. Update Supplier Stats
+                if ($payment->supplier_id && $payment->payment_type === 'supplier_payment') {
+                    \App\Models\Supplier::where('id', $payment->supplier_id)->update([
+                        'total_paid' => DB::raw('total_paid + ' . $payment->amount_iqd),
+                        'last_payment_date' => now()
+                    ]);
+                }
+
                 $payment->journal_entry_id = $journal->id;
                 $payment->saveQuietly();
             });

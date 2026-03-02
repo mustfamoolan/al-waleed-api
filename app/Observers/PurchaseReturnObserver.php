@@ -82,6 +82,11 @@ class PurchaseReturnObserver
                     'credit_amount' => $return->total_iqd,
                 ]);
 
+                // 3. Update Supplier Statistics
+                if ($return->supplier) {
+                    $return->supplier->decrement('total_debt', $return->total_iqd);
+                }
+
                 $return->journal_entry_id = $journal->id;
                 $return->saveQuietly();
             });

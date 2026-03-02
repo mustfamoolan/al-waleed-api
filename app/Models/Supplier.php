@@ -23,6 +23,9 @@ class Supplier extends Model
         'notes',
         'profile_image',
         'is_active',
+        'total_debt',
+        'total_paid',
+        'last_payment_date',
     ];
 
     public function getCurrentBalanceAttribute()
