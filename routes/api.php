@@ -33,10 +33,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Accounting
     Route::apiResource('accounts', \App\Http\Controllers\Api\AccountController::class);
 
-    // Opening Balances
-    Route::get('opening-balances/status', [\App\Http\Controllers\Api\OpeningBalanceController::class, 'status']);
-    Route::post('opening-balances', [\App\Http\Controllers\Api\OpeningBalanceController::class, 'store']);
-    Route::delete('opening-balances', [\App\Http\Controllers\Api\OpeningBalanceController::class, 'destroy']);
 
     Route::get('journal-entries', [\App\Http\Controllers\Api\JournalEntryController::class, 'index']);
     Route::get('journal-entries/{journalEntry}', [\App\Http\Controllers\Api\JournalEntryController::class, 'show']);
@@ -65,17 +61,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('purchase-invoices/{purchaseInvoice}/approve', [\App\Http\Controllers\Api\PurchaseInvoiceController::class, 'approve']);
     Route::post('purchase-invoices/{purchaseInvoice}/post', [\App\Http\Controllers\Api\PurchaseInvoiceController::class, 'post']);
 
-    Route::post('purchase-returns', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'store']);
-    Route::post('purchase-returns/{purchaseReturn}/post', [\App\Http\Controllers\Api\PurchaseReturnController::class, 'post']);
 
     // Sales Agents
     Route::apiResource('sales-agents', \App\Http\Controllers\Api\SalesAgentController::class);
     Route::post('sales-agents/{salesAgent}/calculate-commission', [\App\Http\Controllers\Api\SalesAgentController::class, 'calculateCommission']);
     Route::get('sales-agents/{agent}/dashboard', [\App\Http\Controllers\Api\SalesAgentDashboardController::class, 'show']);
 
-    // Agent Targets
-    Route::apiResource('agent-targets', \App\Http\Controllers\Api\AgentTargetController::class);
-    Route::post('agent-targets/calculate-bonus', [\App\Http\Controllers\Api\AgentTargetController::class, 'calculateBonus']);
 
     // Sales Invoices — Full Workflow
     Route::apiResource('sales-invoices', \App\Http\Controllers\Api\SalesInvoiceController::class);

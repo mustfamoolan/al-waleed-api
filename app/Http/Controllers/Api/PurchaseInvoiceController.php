@@ -67,7 +67,7 @@ class PurchaseInvoiceController extends Controller
             $costPerCarton = $totalCartons > 0 ? $totalFees / $totalCartons : 0;
 
             $invoice = PurchaseInvoice::create([
-                'invoice_no' => 'PI-' . str_pad((PurchaseInvoice::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
+                'invoice_no' => 'PI' . date('Y') . str_pad((PurchaseInvoice::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
                 'supplier_invoice_no' => $request->supplier_invoice_no,
                 'supplier_id' => $request->supplier_id,
                 'invoice_date' => $request->invoice_date,

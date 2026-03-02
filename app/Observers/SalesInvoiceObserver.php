@@ -41,7 +41,7 @@ class SalesInvoiceObserver
 
                     // Get Current Cost from Inventory Balance
                     $balance = InventoryBalance::firstOrNew([
-                        'warehouse_id' => 1,
+                        'warehouse_id' => $warehouseId,
                         'product_id' => $line->product_id
                     ]);
 

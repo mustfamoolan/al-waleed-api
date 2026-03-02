@@ -46,7 +46,7 @@ class SalesInvoiceController extends Controller
 
             $status = $request->status ?? 'draft';
             $invoice = SalesInvoice::create([
-                'invoice_no' => 'SI-' . str_pad((SalesInvoice::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
+                'invoice_no' => 'SI' . date('Y') . str_pad((SalesInvoice::max('id') ?? 0) + 1, 6, '0', STR_PAD_LEFT),
                 'source_type' => $request->source_type ?? 'office',
                 'source_user_id' => auth()->id(),
                 'party_id' => $request->party_id,
