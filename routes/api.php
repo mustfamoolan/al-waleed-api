@@ -141,7 +141,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/top-products', [\App\Http\Controllers\Api\ReportController::class, 'topProducts']);
     Route::get('reports/low-products', [\App\Http\Controllers\Api\ReportController::class, 'lowProducts']);
     Route::get('reports/staff-financials', [\App\Http\Controllers\Api\ReportController::class, 'staffFinancials']);
-    Route::get('reports/agent-performance', [\App\Http\Controllers\Api\ReportController::class, 'agentPerformance']);
+    // Dashboard & Targets
+    Route::get('representative/my/dashboard', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'dashboard']);
+    Route::get('representative/my/targets', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'targets']);
+    Route::get('representative/products', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'products']);
+
+    // Customers Management
+    Route::get('representative/my/customers', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'customers']);
+    Route::post('representative/my/customers', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeCustomer']);
+    Route::get('representative/my/customers/{customer}/financials', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'customerFinancials']);
+
+    // New Workflow Actions
+    Route::post('representative/my/receipts', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeReceipt']);
+    Route::post('representative/my/returns', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeReturn']);
+
+    // Existing Sales
+    Route::get('representative/my/sales', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'sales']);
+    Route::post('representative/my/sales', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeInvoice']);
+    Route::post('representative/my/sales/{invoice}/submit', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'submitInvoice']);
 
     // Additional Reports
     Route::get('reports/customer-profit', [\App\Http\Controllers\Api\ReportController::class, 'customerProfit']);

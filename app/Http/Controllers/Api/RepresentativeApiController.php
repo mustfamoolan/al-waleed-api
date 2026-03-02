@@ -235,4 +235,117 @@ class RepresentativeApiController extends Controller
 
         return response()->json(['data' => $products]);
     }
+
+    /**
+     * Store new receipt from agent app
+     */
+    public function storeReceipt(Request $request)
+    {
+        $agent = $request->user()->salesAgent;
+        if (!$agent)
+            abort(403);
+
+        $validated = $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'amount_iqd' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string',
+        ]);
+
+        $receipt = Receipt::create([
+            'receipt_no' => 'REP-RC-' . strtoupper(uniqid()),
+            'customer_id' => $validated['customer_id'],
+            'agent_id' => $agent->id,
+            'receipt_type' => 'customer_payment',
+            'amount_iqd' => $validated['amount_iqd'],
+            'status' => 'draft',
+            'created_by' => auth()->id(),
+            'notes' => $validated['notes'] ?? 'تحصيل من تطبيق المندوب',
+        ]);
+
+        return response()->json([
+            'message' => 'تم استلام الدفعة وسوف يتم تدقيقها من الإدارة',
+            'data' => $receipt
+        ]);
+    }
+
+    /**
+     * Store new sales return request from agent
+     */
+    public function storeReturn(Request $request)
+    {
+        $agent = $request->user()->salesAgent;
+        if (!$agent)
+            abort(403);
+
+        $validated = $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'lines' => 'required|array',
+            'lines.*.product_id' => 'required|exists:products,id',
+            'lines.*.qty' => 'required|numeric|min:1',
+            'lines.*.unit_id' => 'required|exists:units,id',
+            'lines.*.price_iqd' => 'required|numeric|min:0',
+        ]);
+
+        $return = DB::transaction(function () use ($validated, $agent) {
+            $totalIqd = 0;
+            foreach ($validated['lines'] as $line) {
+                $totalIqd += ($line['qty'] * $line['price_iqd']);
+            }
+
+            $salesReturn = \App\Models\SalesReturn::create([
+                'return_no' => 'REP-RET-' . strtoupper(uniqid()),
+                'customer_id' => $validated['customer_id'],
+                'agent_id' => $agent->id,
+                'return_date' => now(),
+                'total_iqd' => $totalIqd,
+                'status' => 'draft',
+                'created_by' => auth()->id(),
+                'notes' => 'طلب مرتجع من تطبيق المندوب'
+            ]);
+
+            foreach ($validated['lines'] as $line) {
+                \App\Models\SalesReturnLine::create([
+                    'sales_return_id' => $salesReturn->id,
+                    'product_id' => $line['product_id'],
+                    'qty' => $line['qty'],
+                    'unit_id' => $line['unit_id'],
+                    'price_iqd' => $line['price_iqd'],
+                    'line_total_iqd' => $line['qty'] * $line['price_iqd'],
+                ]);
+            }
+            return $salesReturn;
+        });
+
+        return response()->json([
+            'message' => 'تم رفع طلب المرتجع بنجاح',
+            'data' => $return->load('lines.product')
+        ]);
+    }
+
+    /**
+     * Get real financial history of a customer for the agent
+     */
+    public function customerFinancials(Customer $customer)
+    {
+        $agent = auth()->user()->salesAgent;
+        if ($customer->agent_id !== $agent->id)
+            abort(403);
+
+        $invoices = SalesInvoice::where('customer_id', $customer->id)
+            ->where('status', '!=', 'canceled')
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
+
+        $receipts = Receipt::where('customer_id', $customer->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'balance' => $customer->total_debt - $customer->total_paid,
+            'recent_invoices' => $invoices,
+            'recent_receipts' => $receipts
+        ]);
+    }
 }
