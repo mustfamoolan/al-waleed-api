@@ -90,9 +90,28 @@ class SalesAgentController extends Controller
             'commission_rate' => 'nullable|numeric|min:0|max:100',
             'notes' => 'nullable|string',
             'is_active' => 'boolean',
+            'password' => 'nullable|string|min:6',
         ]);
 
         $salesAgent->update($validated);
+
+        // Update password if provided
+        if ($request->has('password') && !empty($request->password)) {
+            $user = $salesAgent->user;
+            if ($user) {
+                $user->update(['password' => \Illuminate\Support\Facades\Hash::make($request->password)]);
+            } else {
+                // Create user if not exists but phone available
+                $user = \App\Models\User::create([
+                    'name' => $salesAgent->name,
+                    'phone' => $salesAgent->phone,
+                    'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+                    'role' => 'agent',
+                    'status' => 'active',
+                ]);
+                $salesAgent->update(['user_id' => $user->id]);
+            }
+        }
 
         return response()->json([
             'message' => 'تم تحديث المندوب بنجاح',
