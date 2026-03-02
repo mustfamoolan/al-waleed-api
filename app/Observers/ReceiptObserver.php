@@ -46,13 +46,23 @@ class ReceiptObserver
                     'created_by' => auth()->id(),
                 ]);
 
-                // Debit: Cashbox (Main Cash 1101)
+                // Debit Side
+                $debitAccountId = null;
                 $cashAccount = Account::where('account_code', '1101')->first();
-                $cashGlAccount = $cashAccount->id;
+
+                if ($receipt->agent_id && $receipt->agent) {
+                    // Try to find Agent's Trust/Cash account (Asset)
+                    $agentTrustAccount = Account::where('name', 'مندوب (عهدة): ' . $receipt->agent->name)->first();
+                    $debitAccountId = $agentTrustAccount ? $agentTrustAccount->id : $cashAccount->id;
+                } else {
+                    $debitAccountId = $cashAccount->id;
+                }
 
                 JournalEntryLine::create([
                     'journal_entry_id' => $journal->id,
-                    'account_id' => $cashGlAccount,
+                    'account_id' => $debitAccountId,
+                    'partner_type' => $receipt->agent_id ? 'agent' : null,
+                    'partner_id' => $receipt->agent_id,
                     'debit_amount' => $receipt->amount_iqd,
                     'credit_amount' => 0,
                 ]);

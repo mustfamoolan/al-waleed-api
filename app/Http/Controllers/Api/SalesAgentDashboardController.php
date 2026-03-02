@@ -65,6 +65,8 @@ class SalesAgentDashboardController extends Controller
                     ->whereMonth('created_at', now()->month)
                     ->where('status', 'posted')
                     ->sum('amount_iqd'),
+                'agent_payable_balance' => $agent->account ? $agent->account->current_balance : 0,
+                'agent_trust_balance' => ($trustAcc = \App\Models\Account::where('name', 'مندوب (عهدة): ' . $agent->name)->first()) ? $trustAcc->current_balance : 0,
             ],
             'customers' => $customers,
             'sales_history' => $recentSales,

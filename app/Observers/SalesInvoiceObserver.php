@@ -150,6 +150,38 @@ class SalesInvoiceObserver
                     }
                 }
 
+                // 5. Calculate and Post Agent Commission
+                if ($invoice->agent_id && $invoice->agent && $invoice->agent->commission_rate > 0) {
+                    $commissionAmount = ($invoice->total_iqd * $invoice->agent->commission_rate) / 100;
+
+                    if ($commissionAmount > 0) {
+                        $commissionAccount = Account::where('account_code', '5103')->first(); // Commission Expense
+                        $agentAccount = Account::find($invoice->agent->account_id);
+
+                        if ($commissionAccount && $agentAccount) {
+                            // Dr Commission Expense
+                            JournalEntryLine::create([
+                                'journal_entry_id' => $journal->id,
+                                'account_id' => $commissionAccount->id,
+                                'debit_amount' => $commissionAmount,
+                                'credit_amount' => 0,
+                                'description' => 'عمولة مبيعات فاتورة رقم ' . $invoice->invoice_no,
+                            ]);
+
+                            // Cr Agent Account (Payable)
+                            JournalEntryLine::create([
+                                'journal_entry_id' => $journal->id,
+                                'account_id' => $agentAccount->id,
+                                'partner_type' => 'agent',
+                                'partner_id' => $invoice->agent_id,
+                                'debit_amount' => 0,
+                                'credit_amount' => $commissionAmount,
+                                'description' => 'استحقاق عمولة مبيعات',
+                            ]);
+                        }
+                    }
+                }
+
                 // OPTIONAL: COGS Entry (Cost of Goods Sold)
                 // Dr COGS (5101) / Cr Inventory (1301)
                 // Calculate Total Cost

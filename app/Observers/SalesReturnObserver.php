@@ -147,8 +147,39 @@ class SalesReturnObserver
                     }
                 }
 
-                $return->journal_entry_id = $journal->id;
-                $return->saveQuietly();
+                // 3. Reverse Agent Commission (if any)
+                $invoice = $return->invoice;
+                if ($invoice && $invoice->agent_id && $invoice->agent && $invoice->agent->commission_rate > 0) {
+                    // Calculate commission to reverse based on return amount
+                    $commissionToReverse = ($return->total_iqd * $invoice->agent->commission_rate) / 100;
+
+                    if ($commissionToReverse > 0) {
+                        $commissionAccount = Account::where('account_code', '5103')->first(); // Commission Expense
+                        $agentAccount = Account::find($invoice->agent->account_id);
+
+                        if ($commissionAccount && $agentAccount) {
+                            // Dr Agent Account (Reduce Payable)
+                            JournalEntryLine::create([
+                                'journal_entry_id' => $journal->id,
+                                'account_id' => $agentAccount->id,
+                                'partner_type' => 'agent',
+                                'partner_id' => $invoice->agent_id,
+                                'debit_amount' => $commissionToReverse,
+                                'credit_amount' => 0,
+                                'description' => 'عكس عمولة بسبب مرتجع مبيعات رقم ' . $return->return_no,
+                            ]);
+
+                            // Cr Commission Expense (Reduce Expense)
+                            JournalEntryLine::create([
+                                'journal_entry_id' => $journal->id,
+                                'account_id' => $commissionAccount->id,
+                                'debit_amount' => 0,
+                                'credit_amount' => $commissionToReverse,
+                                'description' => 'عكس مصروف عمولة',
+                            ]);
+                        }
+                    }
+                }
             });
         }
     }
