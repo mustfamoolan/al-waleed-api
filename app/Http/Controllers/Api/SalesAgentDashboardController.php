@@ -48,9 +48,22 @@ class SalesAgentDashboardController extends Controller
             ->limit(20)
             ->get();
 
-        // 4. Targets Performance (Simplified call to existing report logic if possible or manual)
-        // We'll return the raw data and let the frontend handle some calculation or add summary here.
-        $targets = $agent->targets()->with('items')->get();
+        // 4. Targets Performance - Trigger live calculation to ensure data is fresh
+        try {
+            $periodMonth = now()->format('Y-m');
+            (new \App\Services\TargetService())->calculate($periodMonth, $agent->staff_id);
+        } catch (\Exception $e) {
+            \Log::error("Dashboard target calculation failed: " . $e->getMessage());
+        }
+
+        $targets = $agent->targets()
+            ->with([
+                'items',
+                'results' => function ($q) {
+                    $q->orderBy('calculated_at', 'desc')->limit(1);
+                }
+            ])
+            ->get();
 
         return response()->json([
             'agent' => $agent,
@@ -59,11 +72,11 @@ class SalesAgentDashboardController extends Controller
                 'total_active_debt' => $customers->sum('balance'),
                 'total_sales_month' => SalesInvoice::where('agent_id', $agent->id)
                     ->whereMonth('created_at', now()->month)
-                    ->where('status', 'delivered')
+                    ->whereIn('status', ['pending_approval', 'approved', 'delivered'])
                     ->sum('total_iqd'),
                 'total_collected_month' => Receipt::where('agent_id', $agent->id)
                     ->whereMonth('created_at', now()->month)
-                    ->where('status', 'posted')
+                    ->whereIn('status', ['posted', 'draft'])
                     ->sum('amount_iqd'),
                 'agent_payable_balance' => $agent->account ? $agent->account->current_balance : 0,
                 'agent_trust_balance' => ($trustAcc = \App\Models\Account::where('name', 'مندوب (عهدة): ' . $agent->name)->first()) ? $trustAcc->current_balance : 0,

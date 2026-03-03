@@ -45,39 +45,47 @@ class TargetService
                 continue;
 
             $invoices = SalesInvoice::where('source_user_id', $userId)
-                ->where('status', 'delivered')
+                ->whereIn('status', ['pending_approval', 'approved', 'delivered'])
                 ->whereBetween('created_at', [$start . ' 00:00:00', $end . ' 23:59:59'])
                 ->pluck('id');
 
-            if ($invoices->isEmpty())
+            if ($invoices->isEmpty()) {
+                // Reset result if no invoices found anymore (e.g. they were canceled or moved out of month)
+                AgentTargetResult::updateOrCreate(
+                    ['agent_target_id' => $target->id],
+                    [
+                        'achieved_qty' => 0,
+                        'achievement_percent' => 0,
+                        'bonus_iqd' => 0,
+                        'calculated_at' => now(),
+                    ]
+                );
                 continue;
+            }
 
             $achievedQty = 0;
 
             // Logic per Type
             if ($target->target_type === 'product') {
-                // Single product in items? Or just logic? Model structure implies items.
                 $productIds = $target->items->pluck('product_id')->toArray();
                 $achievedQty = SalesInvoiceLine::whereIn('sales_invoice_id', $invoices)
                     ->whereIn('product_id', $productIds)
                     ->sum('qty');
             } elseif ($target->target_type === 'category') {
                 $categoryIds = $target->items->pluck('category_id')->toArray();
-                // Join needed
                 $achievedQty = SalesInvoiceLine::whereIn('sales_invoice_id', $invoices)
                     ->whereHas('product', function ($q) use ($categoryIds) {
                         $q->whereIn('product_category_id', $categoryIds);
                     })->sum('qty');
             } elseif ($target->target_type === 'supplier') {
                 $supplierIds = $target->items->pluck('supplier_id')->toArray();
-                // Join needed
                 $achievedQty = SalesInvoiceLine::whereIn('sales_invoice_id', $invoices)
                     ->whereHas('product', function ($q) use ($supplierIds) {
-                        $q->whereHas('suppliers', function ($sq) use ($supplierIds) { // product_suppliers
+                        $q->whereHas('suppliers', function ($sq) use ($supplierIds) {
                             $sq->whereIn('supplier_id', $supplierIds);
                         });
                     })->sum('qty');
-            } elseif ($target->target_type === 'mixed_products') {
+            } elseif ($target->target_type === 'mixed_products' || $target->target_type === 'mixed') {
                 $productIds = $target->items->pluck('product_id')->toArray();
                 $achievedQty = SalesInvoiceLine::whereIn('sales_invoice_id', $invoices)
                     ->whereIn('product_id', $productIds)
@@ -88,19 +96,19 @@ class TargetService
             $percent = $target->target_qty > 0 ? ($achievedQty / $target->target_qty) * 100 : 0;
             $bonus = 0;
             if ($percent >= $target->min_achievement_percent) {
-                // Reward per unit achieved? OR Reward for hitting target?
-                // User said: bonus = achieved_qty * reward_per_unit_iqd
                 $bonus = $achievedQty * $target->reward_per_unit_iqd;
             }
 
-            // Store Result
-            AgentTargetResult::create([
-                'agent_target_id' => $target->id,
-                'achieved_qty' => $achievedQty,
-                'achievement_percent' => $percent,
-                'bonus_iqd' => $bonus,
-                'calculated_at' => now(),
-            ]);
+            // Store Result (Update existing monthly result)
+            AgentTargetResult::updateOrCreate(
+                ['agent_target_id' => $target->id],
+                [
+                    'achieved_qty' => $achievedQty,
+                    'achievement_percent' => $percent,
+                    'bonus_iqd' => $bonus,
+                    'calculated_at' => now(),
+                ]
+            );
 
             if (!isset($summaryData[$staff]))
                 $summaryData[$staff] = 0;

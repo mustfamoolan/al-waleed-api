@@ -157,6 +157,15 @@ class RepresentativeApiController extends Controller
             return $invoice;
         });
 
+        // Trigger live target calculation
+        try {
+            $periodMonth = now()->format('Y-m');
+            $staffId = $agent->staff_id;
+            (new \App\Services\TargetService())->calculate($periodMonth, $staffId);
+        } catch (\Exception $e) {
+            \Log::error("Target calculation failed: " . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'تم إنشاء الفاتورة كمسودة بنجاح',
             'data' => $invoice->load('lines.product')
