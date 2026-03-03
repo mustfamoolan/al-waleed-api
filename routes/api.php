@@ -145,6 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('representative/my/dashboard', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'dashboard']);
     Route::get('representative/my/targets', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'targets']);
     Route::get('representative/products', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'products']);
+    Route::get('representative-admin/pending-sales', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'pendingInvoices']);
 
     // Customers Management
     Route::get('representative/my/customers', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'customers']);

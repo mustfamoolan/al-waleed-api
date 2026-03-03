@@ -348,4 +348,17 @@ class RepresentativeApiController extends Controller
             'recent_receipts' => $receipts
         ]);
     }
+
+    /**
+     * Get all invoices pending approval (for admin monitoring)
+     */
+    public function pendingInvoices(Request $request)
+    {
+        $invoices = SalesInvoice::where('status', 'pending_approval')
+            ->with(['customer', 'agent', 'lines.product', 'lines.unit'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json(['data' => $invoices]);
+    }
 }
