@@ -329,8 +329,14 @@ class RepresentativeApiController extends Controller
     /**
      * Get real financial history of a customer for the agent
      */
-    public function customerFinancials(Customer $customer)
+    public function customerFinancials($id)
     {
+        $customer = Customer::find($id);
+
+        if (!$customer) {
+            return response()->json(['message' => 'Customer not found'], 404);
+        }
+
         $agent = auth()->user()->salesAgent;
         if ($customer->agent_id !== $agent->id)
             abort(403);

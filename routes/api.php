@@ -141,25 +141,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/top-products', [\App\Http\Controllers\Api\ReportController::class, 'topProducts']);
     Route::get('reports/low-products', [\App\Http\Controllers\Api\ReportController::class, 'lowProducts']);
     Route::get('reports/staff-financials', [\App\Http\Controllers\Api\ReportController::class, 'staffFinancials']);
-    // Dashboard & Targets
-    Route::get('my/dashboard', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'dashboard']);
-    Route::get('my/targets', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'targets']);
-    Route::get('products-list', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'products']);
     Route::get('representative-admin/pending-sales', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'pendingInvoices']);
-
-    // Customers Management
-    Route::get('my/customers', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'customers']);
-    Route::post('my/customers', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeCustomer']);
-    Route::get('my/customers/{customer}/financials', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'customerFinancials']);
-
-    // New Workflow Actions
-    Route::post('my/receipts', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeReceipt']);
-    Route::post('my/returns', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeReturn']);
-
-    // Existing Sales
-    Route::get('my/sales', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'sales']);
-    Route::post('my/sales', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'storeInvoice']);
-    Route::post('my/sales/{invoice}/submit', [\App\Http\Controllers\Api\RepresentativeApiController::class, 'submitInvoice']);
 
     // Additional Reports
     Route::get('reports/customer-profit', [\App\Http\Controllers\Api\ReportController::class, 'customerProfit']);

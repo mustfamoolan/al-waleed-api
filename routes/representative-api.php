@@ -25,6 +25,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // My Managed Records
     Route::get('my/customers', [RepresentativeApiController::class, 'customers']);
     Route::post('my/customers', [RepresentativeApiController::class, 'storeCustomer']);
+    Route::get('my/customers/{customer}/financials', [RepresentativeApiController::class, 'customerFinancials']);
+
+    // Financial Actions
+    Route::post('my/receipts', [RepresentativeApiController::class, 'storeReceipt']);
+    Route::post('my/returns', [RepresentativeApiController::class, 'storeReturn']);
+
     Route::get('my/sales', [RepresentativeApiController::class, 'sales']);
     Route::post('my/sales', [RepresentativeApiController::class, 'storeInvoice']);
     Route::post('my/sales/{invoice}/submit', [RepresentativeApiController::class, 'submitInvoice']);
@@ -33,5 +39,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('my/targets', [RepresentativeApiController::class, 'targets']);
 
     // Inventory
-    Route::get('products', [RepresentativeApiController::class, 'products']);
+    Route::get('products-list', [RepresentativeApiController::class, 'products']);
 });
