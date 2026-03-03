@@ -13,6 +13,11 @@ use App\Models\Account;
 
 class SalesInvoiceObserver
 {
+    public function saving(SalesInvoice $invoice)
+    {
+        $invoice->total_weight_kg = $invoice->calculateTotalWeight();
+    }
+
     public function updated(SalesInvoice $invoice)
     {
         // Handle Status: PREPARED (Stock Deduction)

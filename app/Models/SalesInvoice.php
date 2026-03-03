@@ -23,6 +23,8 @@ class SalesInvoice extends Model
         'delivery_address_text',
         'delivery_lat',
         'delivery_lng',
+        'latitude',
+        'longitude',
         'subtotal_iqd',
         'discount_iqd',
         'total_iqd',
@@ -39,6 +41,7 @@ class SalesInvoice extends Model
         'customer_city',
         'customer_phone',
         'customer_address',
+        'total_weight_kg',
     ];
 
     public function lines()
@@ -74,5 +77,23 @@ class SalesInvoice extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function calculateTotalWeight()
+    {
+        $totalWeight = 0;
+        foreach ($this->lines as $line) {
+            $product = $line->product;
+            if (!$product)
+                continue;
+
+            // Determine if using piece_weight or carton_weight
+            if ($line->unit_id == $product->pack_unit_id) {
+                $totalWeight += ($line->qty * ($product->carton_weight ?? 0));
+            } else {
+                $totalWeight += ($line->qty * ($product->piece_weight ?? 0));
+            }
+        }
+        return $totalWeight;
     }
 }
