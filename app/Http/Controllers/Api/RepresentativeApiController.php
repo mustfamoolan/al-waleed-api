@@ -116,6 +116,8 @@ class RepresentativeApiController extends Controller
             'lines.*.unit_id' => 'required|exists:units,id',
             'lines.*.price_iqd' => 'required|numeric|min:0',
             'payment_type' => 'required|in:cash,credit',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
             'notes' => 'nullable|string',
         ]);
 
@@ -134,6 +136,8 @@ class RepresentativeApiController extends Controller
                 'payment_type' => $validated['payment_type'],
                 'subtotal_iqd' => $subtotalIqd,
                 'total_iqd' => $subtotalIqd,
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
                 'status' => 'pending_approval',
                 'notes' => $validated['notes'] ?? null,
                 'created_by' => auth()->id(),
